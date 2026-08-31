@@ -462,9 +462,10 @@ select{
 }
 select:focus{ outline:none; border-color:var(--gold); }
 
+/* stacked, so a long franchise name doesn't get squeezed into three lines */
 .roster-head{
-  display:flex; align-items:baseline; justify-content:space-between;
-  gap:10px; margin:18px 0 9px;
+  display:flex; flex-direction:column; align-items:flex-start;
+  gap:3px; margin:18px 0 9px;
 }
 .roster-head h2{
   font-family:var(--display); font-weight:700; font-size:22px;
@@ -504,6 +505,53 @@ tbody tr.kept{ background:rgba(196,202,212,.05); }
   font-family:var(--mono); font-size:9px; font-weight:600; letter-spacing:.08em;
   color:var(--keep); background:rgba(196,202,212,.13);
   border-radius:3px; padding:2px 4px;
+}
+
+/* ---------- live roster ---------- */
+
+.rlist{
+  border:1px solid var(--line-soft); border-radius:var(--r);
+  overflow:hidden; background:var(--card); margin-top:10px;
+}
+.rrow{
+  display:flex; align-items:center; gap:10px; width:100%;
+  appearance:none; cursor:pointer; text-align:left;
+  background:none; border:0; border-bottom:1px solid var(--line-soft);
+  border-left:3px solid var(--pos, var(--etc));
+  padding:11px 12px; color:var(--text); font-family:var(--body); font-size:15px;
+}
+.rrow:last-child{ border-bottom:0; }
+.rrow:hover{ background:var(--raised); }
+.rrow:focus-visible{ outline:2px solid var(--gold); outline-offset:-2px; }
+.rrow .n{ font-weight:600; line-height:1.2; }
+.rrow .t{
+  font-family:var(--mono); font-size:11.5px; color:var(--faint); margin-top:2px;
+}
+.rrow .grow{ flex:1 1 auto; min-width:0; }
+.rrow .n, .rrow .t{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+
+.schip{
+  display:inline-block; margin-left:6px; vertical-align:1px;
+  font-family:var(--mono); font-size:9px; font-weight:600; letter-spacing:.08em;
+  color:var(--silver); background:rgba(196,202,212,.13);
+  border-radius:3px; padding:2px 4px;
+}
+
+.rcost{ text-align:right; white-space:nowrap; flex:none; }
+.rcost .r{
+  font-family:var(--display); font-weight:700; font-size:19px;
+  letter-spacing:.02em; color:var(--gold); font-variant-numeric:tabular-nums;
+}
+.rcost .x{
+  font-family:var(--display); font-weight:600; font-size:15px;
+  letter-spacing:.06em; color:var(--stop);
+}
+.rcost .q{
+  font-family:var(--mono); font-size:13px; font-weight:600; color:var(--silver-dim);
+}
+.rcost small{
+  display:block; font-family:var(--mono); font-size:9px;
+  letter-spacing:.09em; text-transform:uppercase; color:var(--faint); margin-top:1px;
 }
 
 /* ---------- draft history ---------- */
@@ -1258,7 +1306,8 @@ const state = {
   histQ: "", histName: null,
 
   // rosters
-  team: null
+  team: null,
+  rosterMode: "board"       // "board" (a draft year) | "live" (today's roster)
 };
 
 const $  = s => document.querySelector(s);
@@ -1978,13 +2027,40 @@ function teamsIn(year){
   );
 }
 
+/** Every franchise we can show, live rosters included. */
+function allTeams(year){
+  const names = new Set(teamsIn(year));
+  for (const t of sync.live?.teams || []) names.add(t.name);
+  return [...names].sort((a,b) => a.localeCompare(b, undefined, { sensitivity:"base" }));
+}
+
+/**
+ * What it would cost to keep a rostered player next season, worked out from
+ * whichever board they last appear on.
+ */
+function keeperOutlook(playerName){
+  const byYear = BY_NAME.get(key(playerName)) || {};
+  const last = [...YEARS].reverse().map(y => byYear[y]).find(Boolean);
+  if (!last) return { kind:"waiver" };
+
+  const trace  = traceOrigin(last);
+  const target = Number(last.year) + 1;
+  const season = target - Number(trace.origin.year);
+  const res    = draftedCost(trace.origin.rd, season);
+  return res
+    ? { kind:"cost", round:res.round, season, target, entry:last }
+    : { kind:"expired", target, entry:last };
+}
+
+const POS_RANK = { QB:0, RB:1, WR:2, TE:3, K:4, DEF:5 };
+
 function renderRoster(){
   const year = activeYear();
-  const sel = $("#teamSel");
-  const out = $("#rosterOut");
+  const sel  = $("#teamSel");
+  const out  = $("#rosterOut");
   out.textContent = "";
 
-  const teams = teamsIn(year);
+  const teams = allTeams(year);
   if (!teams.includes(state.team)) state.team = teams[0] || null;
 
   sel.textContent = "";
@@ -1992,9 +2068,9 @@ function renderRoster(){
     sel.disabled = true;
     sel.appendChild(new Option("No teams yet", ""));
     const box = el("div", "empty");
-    box.innerHTML = `<strong>The ${year} draft hasn't happened</strong>
-      Once the board is up, drop it into the data file and every ${year} roster appears here.
-      Keeper costs for the ${year} season already work — check the <b>Keeper Cost</b> tab.`;
+    box.innerHTML = `<strong>Nothing to show yet</strong>
+      No ${year} board and no live rosters from Sleeper. Keeper costs still work —
+      check the <b>Keeper Calculator</b>.`;
     out.appendChild(box);
     return;
   }
@@ -2005,6 +2081,27 @@ function renderRoster(){
     sel.appendChild(o);
   }
 
+  // Draft board / Current roster
+  const liveTeam = (sync.live?.teams || []).find(t => t.name === state.team);
+  const modeSeg = el("div", "seg");
+  for (const [k, label] of [["board","Draft board"],["live","Current roster"]]){
+    const b = el("button", state.rosterMode === k ? "on" : "", label);
+    b.type = "button";
+    b.disabled = k === "live" && !liveTeam;
+    b.setAttribute("aria-pressed", String(state.rosterMode === k));
+    b.addEventListener("click", () => { state.rosterMode = k; render(); });
+    modeSeg.appendChild(b);
+  }
+  const modeWrap = el("div", "field");
+  modeWrap.style.marginTop = "12px";
+  modeWrap.appendChild(modeSeg);
+  out.appendChild(modeWrap);
+
+  if (state.rosterMode === "live" && liveTeam) renderLiveRoster(out, liveTeam);
+  else renderDraftBoard(out, year);
+}
+
+function renderDraftBoard(out, year){
   const picks = LEAGUE.years[year].picks
     .filter(p => p[5] === state.team)
     .sort((a,b) => a[0] - b[0]);
@@ -2018,6 +2115,15 @@ function renderRoster(){
   head.appendChild(count);
   out.appendChild(head);
 
+  if (!picks.length){
+    const box = el("div", "empty");
+    box.innerHTML = `<strong>No ${year} board for this team</strong>
+      They may not have been in the league that season. Try another year, or
+      switch to <b>Current roster</b>.`;
+    out.appendChild(box);
+    return;
+  }
+
   const wrap = el("div", "tablewrap");
   const table = el("table");
   table.innerHTML = `<thead><tr>
@@ -2029,7 +2135,6 @@ function renderRoster(){
     const [rd, pk, name, pos, nfl, , kept] = p;
     const tr = el("tr");
     if (kept) tr.classList.add("kept");
-
     const c1 = el("td", "c-rd", String(rd));
     const c2 = el("td", "c-pk", String(pk).padStart(2, "0"));
     const c3 = el("td", "c-pl");
@@ -2039,7 +2144,6 @@ function renderRoster(){
     const chip = el("span", "pos", pos);
     chip.style.setProperty("--pos", posVar(pos));
     c4.appendChild(chip);
-
     tr.append(c1, c2, c3, c4);
     tb.appendChild(tr);
   }
@@ -2047,6 +2151,94 @@ function renderRoster(){
   wrap.appendChild(table);
   out.appendChild(wrap);
 }
+
+/** The live roster, every player priced as a keeper. */
+function renderLiveRoster(out, team){
+  const head = el("div", "roster-head");
+  head.appendChild(el("h2", null, team.name));
+  const bits = [`${sync.live.season} ROSTER`, `${team.players.length} PLAYERS`];
+  if (team.wins != null) bits.push(`${team.wins}-${team.losses}${team.ties ? "-" + team.ties : ""}`);
+  const count = el("div", "count", bits.join(" · "));
+  count.style.color = yearVar(sync.live.season);
+  head.appendChild(count);
+  out.appendChild(head);
+
+  if (!team.players.length){
+    const box = el("div", "empty");
+    box.innerHTML = `<strong>Roster is empty</strong>
+      Sleeper reports no players on this roster right now.`;
+    out.appendChild(box);
+    return;
+  }
+
+  // names we still need from the player index
+  const unknown = team.players.filter(id => !PLAYERS.map[id]);
+  if (unknown.length && PLAYERS.state !== "failed"){
+    if (PLAYERS.state !== "loading") ensurePlayerNames(team.players).then(() => render());
+    const box = el("div", "empty");
+    box.innerHTML = `<strong>Loading the player index</strong>
+      Sleeper identifies rostered players by id, so the name list is being fetched.
+      It's cached for a day after this.`;
+    out.appendChild(box);
+    return;
+  }
+
+  const rows = team.players.map(id => {
+    const [name, pos, nfl] = PLAYERS.map[id] || [`Unknown (${id})`, "", "FA"];
+    return { id, name, pos, nfl, look: keeperOutlook(name), starter: team.starters.includes(id) };
+  }).sort((a,b) =>
+    (POS_RANK[a.pos] ?? 9) - (POS_RANK[b.pos] ?? 9) ||
+    rankOutlook(a.look) - rankOutlook(b.look) ||
+    a.name.localeCompare(b.name)
+  );
+
+  const keepable = rows.filter(r => r.look.kind === "cost").length;
+  const note = el("div", "flag info");
+  note.appendChild(el("span", "dot"));
+  const nt = el("span");
+  nt.innerHTML = `<b>${keepable} of ${rows.length} priced.</b> Costs are for
+    ${rows.find(r => r.look.target)?.look.target || "next season"}. You may keep
+    <b>2</b>. Anyone off waivers is priced by ADP — open them in the calculator.`;
+  note.appendChild(nt);
+  out.appendChild(note);
+
+  const list = el("div", "rlist");
+  for (const r of rows){
+    const row = el("button", "rrow");
+    row.type = "button";
+    row.style.setProperty("--pos", posVar(r.pos));
+
+    const main = el("div", "grow");
+    main.innerHTML = `<div class="n">${esc(r.name)}${r.starter ? '<span class="schip">START</span>' : ""}</div>
+                      <div class="t">${esc(r.pos || "—")} · ${esc(r.nfl)}</div>`;
+
+    const cost = el("div", "rcost");
+    const L = r.look;
+    if (L.kind === "cost"){
+      cost.innerHTML = `<span class="r">R${L.round}</span>
+        <small>${L.season === 2 ? "final yr" : "keeper yr " + L.season}</small>`;
+    } else if (L.kind === "expired"){
+      cost.innerHTML = `<span class="x">POOL</span><small>term used up</small>`;
+    } else {
+      cost.innerHTML = `<span class="q">ADP</span><small>waiver</small>`;
+    }
+
+    row.append(main, cost);
+    row.addEventListener("click", () => {
+      if (L.entry){
+        state.calcPick = L.entry.id; state.manual = false;
+      } else {
+        state.manual = true; state.source = "waiver";
+      }
+      state.season = null;
+      setSection("calc");
+    });
+    list.appendChild(row);
+  }
+  out.appendChild(list);
+}
+
+const rankOutlook = L => L.kind === "cost" ? L.round : L.kind === "waiver" ? 90 : 99;
 
 $("#teamSel").addEventListener("change", e => { state.team = e.target.value; render(); });
 
@@ -2076,13 +2268,13 @@ function render(){
 const SLEEPER = {
   leagueId: "1399177243342667776",
   base:     "https://api.sleeper.app/v1",
-  cacheKey: "nfa.sleeper.v2",
+  cacheKey: "nfa.sleeper.v3",
   ttlMs:    30 * 60 * 1000,   // half an hour
   maxHops:  8                 // guard against a cyclic previous_league_id
 };
 
 // What the last sync did, surfaced in the menu so a silent failure isn't silent.
-const sync = { state:"idle", at:null, seasons:[], league:null, error:null, from:null };
+const sync = { state:"idle", at:null, seasons:[], league:null, error:null, from:null, live:null };
 
 async function getJSON(url){
   const r = await fetch(url, { headers:{ accept:"application/json" } });
@@ -2096,6 +2288,8 @@ async function getJSON(url){
  */
 async function fetchSleeperSeasons(){
   const out = [];
+  const meta = {};          // player_id -> [name, pos, nflTeam], harvested from picks
+  let live = null;          // the current season's rosters as they stand today
   let id = SLEEPER.leagueId;
 
   for (let hop = 0; id && hop < SLEEPER.maxHops; hop++){
@@ -2142,6 +2336,13 @@ async function fetchSleeperSeasons(){
         ];
       }).filter(r => r[0] && r[1]);
 
+      // player_id -> name/pos/team, free of charge, straight off the picks
+      for (const p of picks){
+        const m = p.metadata || {};
+        const nm = [m.first_name, m.last_name].filter(Boolean).join(" ").trim();
+        if (p.player_id && nm) meta[p.player_id] = [nm, (m.position||"").toUpperCase(), m.team||"FA"];
+      }
+
       out.push({
         season: String(d.season || lg.season),
         rounds: rounds || Math.max(...rows.map(r => r[0])),
@@ -2150,9 +2351,75 @@ async function fetchSleeperSeasons(){
       });
     }
 
+    // the newest hop is the live one — keep its rosters as they stand today
+    if (hop === 0){
+      live = {
+        season: String(lg.season),
+        leagueName: lg.name,
+        teams: (rosters || []).map(r => ({
+          rosterId: r.roster_id,
+          name: teamOf.get(r.roster_id),
+          players: Array.isArray(r.players) ? r.players : [],
+          starters: Array.isArray(r.starters) ? r.starters.filter(x => x && x !== "0") : [],
+          wins: r.settings?.wins ?? null,
+          losses: r.settings?.losses ?? null,
+          ties: r.settings?.ties ?? 0,
+          fpts: r.settings?.fpts != null
+            ? Number(r.settings.fpts) + Number(r.settings.fpts_decimal || 0) / 100
+            : null
+        })).filter(t => t.name)
+      };
+    }
+
     id = lg.previous_league_id;
   }
-  return out;
+  return { seasons: out, live, meta };
+}
+
+/* ---- player index: names for rostered players Sleeper only gives us by id ---- */
+
+const PLAYERS = { map:{}, state:"idle", error:null };
+
+/**
+ * Draft picks already name everyone who was drafted. Only if a roster holds
+ * someone who was never drafted in a season we've seen do we reach for
+ * /players/nfl — ~5MB, which Sleeper asks callers to fetch at most daily, so it
+ * is reduced to just the ids in play and cached for a day.
+ */
+async function ensurePlayerNames(ids){
+  const missing = ids.filter(id => id && !PLAYERS.map[id]);
+  if (!missing.length) return true;
+
+  try {
+    const raw = localStorage.getItem("nfa.players.v1");
+    if (raw){
+      const c = JSON.parse(raw);
+      if (Date.now() - c.ts < 24 * 60 * 60 * 1000) Object.assign(PLAYERS.map, c.map || {});
+    }
+  } catch { /* ignore */ }
+
+  const still = ids.filter(id => id && !PLAYERS.map[id]);
+  if (!still.length) return true;
+
+  PLAYERS.state = "loading"; PLAYERS.error = null; render();
+  try {
+    const all = await getJSON(`${SLEEPER.base}/players/nfl`);
+    for (const id of ids){
+      const p = all?.[id];
+      if (!p) continue;
+      const nm = p.full_name || [p.first_name, p.last_name].filter(Boolean).join(" ");
+      PLAYERS.map[id] = [nm.trim(), (p.position || "").toUpperCase(), p.team || "FA"];
+    }
+    try {
+      localStorage.setItem("nfa.players.v1", JSON.stringify({ ts:Date.now(), map:PLAYERS.map }));
+    } catch { /* quota — the in-memory map still works for this visit */ }
+    PLAYERS.state = "ready";
+    return true;
+  } catch (err){
+    PLAYERS.state = "failed";
+    PLAYERS.error = String(err && err.message || err);
+    return false;
+  }
 }
 
 /** Fold fetched seasons into LEAGUE. Sleeper wins for any season it supplies. */
@@ -2178,9 +2445,9 @@ function readCache(){
     return Array.isArray(c?.seasons) ? c : null;
   } catch { return null; }
 }
-function writeCache(seasons, league){
+function writeCache(payload){
   try {
-    localStorage.setItem(SLEEPER.cacheKey, JSON.stringify({ ts:Date.now(), seasons, league }));
+    localStorage.setItem(SLEEPER.cacheKey, JSON.stringify({ ts:Date.now(), ...payload }));
   } catch { /* private mode, quota, blocked site data — the page works anyway */ }
 }
 
@@ -2194,6 +2461,8 @@ async function syncSleeper({ force = false } = {}){
     sync.state = "cache"; sync.from = "cache";
     sync.at = cached.ts; sync.seasons = cached.seasons.map(s => s.season).sort();
     sync.league = cached.league || null;
+    sync.live = cached.live || null;
+    Object.assign(PLAYERS.map, cached.meta || {});
     render();
   }
 
@@ -2202,14 +2471,16 @@ async function syncSleeper({ force = false } = {}){
 
   sync.state = "loading"; sync.error = null; renderMenu();
   try {
-    const seasons = await fetchSleeperSeasons();
-    if (!seasons.length) throw new Error("no completed drafts returned");
+    const { seasons, live, meta } = await fetchSleeperSeasons();
+    if (!seasons.length && !live) throw new Error("no drafts or rosters returned");
     applySeasons(seasons);
-    const leagueName = seasons[0]?.leagueName || null;
-    writeCache(seasons, leagueName);
+    Object.assign(PLAYERS.map, meta || {});
+    const leagueName = live?.leagueName || seasons[0]?.leagueName || null;
+    writeCache({ seasons, live, meta, league:leagueName });
     sync.state = "live"; sync.from = "network"; sync.at = Date.now();
     sync.seasons = seasons.map(s => s.season).sort();
     sync.league = leagueName;
+    sync.live = live;
   } catch (err){
     sync.state = cached ? "cache" : "failed";
     sync.error = String(err && err.message || err);

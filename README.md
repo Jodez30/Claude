@@ -28,7 +28,17 @@ isn't on a loaded board.
 every pick. Search a player instead and you get their history across every
 loaded board: who took them, where, and whether it was a keeper.
 
-**Team Rosters** — one franchise's board for one year.
+**Team Rosters** — two views per franchise. *Draft board* is that year's picks.
+*Current roster* is live from Sleeper: who's on the team right now, the record,
+and **what each player would cost to keep next season** — priced from whichever
+board they last appear on. Anyone never drafted is marked as a waiver pickup to
+be priced by ADP. Tapping any row opens that player in the calculator.
+
+Sleeper identifies rostered players by id, and draft picks only name the players
+who were drafted, so a roster holding an undrafted pickup needs the
+`/players/nfl` index. That is fetched **lazily** — only when you first open a
+live roster, never on page load — then reduced to the ids in play and cached for
+a day, which is also what Sleeper asks callers to do.
 
 The **Roster clock** on each cost lookup lays out all three seasons and the year
 the player returns to the pool, so the term limit is visible rather than

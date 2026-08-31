@@ -8,28 +8,48 @@ the file or serve the directory and it works.
 
 ## What it does
 
-Three tabs, one shared year selector. Every year carries its own colour — 2024
-blue, 2025 amber, 2026 teal — through the selector, result rows, board headers
-and history cards, so which board you're looking at reads at a glance.
+A slide-out menu holds three standalone sections, over one shared year selector.
 
-**Keeper Cost** — search a drafted player and get the round it would cost to
-keep them. Where the boards can prove it, the keeper season is worked out
-automatically: a pick ESPN flagged `K` is traced back to the season the player
-was actually drafted, so the app knows whether next year is their 1st or 2nd
-(and final) keeper season. Toggle to **Waiver wire** to price a pickup off ADP
-under the OBJ rule, or *price a pickup by hand* to enter an original round
-directly for someone who isn't on a loaded board.
+**Keeper Calculator** — everything keeper-related in one place. Search a drafted
+player and get the round it would cost to keep them, the player's own **keeper
+history**, and the league rules, without leaving the section.
 
-**Draft History** — with a year selected, the whole board round by round, with
-the franchise on every pick. Search a player instead and you get their history
-across every loaded board: who took them, where, and whether it was a keeper.
+The history is what makes the cost trustworthy: it lists every board the player
+appears on, whether each pick was a draft or a keeper, and what that makes their
+roster-season count. A pick ESPN flagged `K` is traced back to the season the
+player was actually drafted, so the app works out whether next year is their 1st
+or 2nd (and final) keeper season instead of asking. That stays overridable.
 
-**Rosters** — one franchise's board for one year.
+Toggle to **Waiver wire** to price a pickup off ADP under the OBJ rule, or
+*price a pickup by hand* to enter an original round directly for someone who
+isn't on a loaded board.
+
+**Draft History** — a whole year's board, round by round, with the franchise on
+every pick. Search a player instead and you get their history across every
+loaded board: who took them, where, and whether it was a keeper.
+
+**Team Rosters** — one franchise's board for one year.
 
 The **Roster clock** on each cost lookup lays out all three seasons and the year
 the player returns to the pool, so the term limit is visible rather than
-something you have to work out. Keeper Cost and Draft History cross-link, so you
-can jump from a price to a player's history and back.
+something you have to work out.
+
+## Design
+
+Off-black ground, silver structure, gold reserved for the one thing that costs
+you something — the keeper round. Nothing else on the page is gold.
+
+Draft years are keyed to metals, oldest to newest: **2024 bronze, 2025 silver,
+2026 gold**. Each year keeps its metal everywhere it appears — the year
+selector, search results, board headers, roster counts, history rows — and holds
+it while idle, so the boards stay distinguishable at rest rather than only on
+tap. Position pills are deliberately desaturated so they sit under the metals
+instead of fighting them.
+
+The drawer parks offscreen via `transform` rather than `visibility`, because a
+transitioned `visibility` stays computed-hidden long enough to swallow the
+`focus()` call that moves keyboard focus into the menu. `inert` is what keeps the
+closed drawer out of the tab order and the accessibility tree.
 
 ## The rules, as implemented
 

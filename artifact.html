@@ -10,34 +10,40 @@
 :root{
   color-scheme: dark;
 
-  --ground:      #0D131E;
-  --card:        #151D2B;
-  --raised:      #1C2637;
-  --line:        #29354A;
-  --line-soft:   #1F2A3B;
+  /* Off-black ground, silver structure, gold for what costs you something. */
+  --ground:      #0C0C0E;
+  --card:        #141418;
+  --raised:      #1C1C21;
+  --line:        #2E2E36;
+  --line-soft:   #212127;
 
-  --text:        #E9EEF7;
-  --muted:       #8A99B2;   /* blue-biased neutral, not a default grey */
-  --faint:       #5E6D85;
+  --text:        #ECECEF;
+  --muted:       #9B9BA6;   /* silver-leaning neutral, not a default grey */
+  --faint:       #6A6A75;
 
-  --chalk:       #F5C563;   /* the price. the one loud thing on the page */
-  --chalk-dim:   #7A6231;
-  --keep:        #56D6A8;
-  --warn:        #F59B57;
-  --stop:        #EF6B84;
+  --gold:        #E3BC5E;   /* the price. the one loud thing on the page */
+  --gold-dim:    #6B5729;
+  --silver:      #C4CAD4;
+  --silver-dim:  #7C818B;
 
-  --qb:          #F2789A;
-  --rb:          #56D6A8;
-  --wr:          #6BADF5;
-  --te:          #C79BF0;
-  --etc:         #8A99B2;
+  --keep:        #C4CAD4;
+  --warn:        #DF9243;
+  --stop:        #D06A6A;
 
-  /* Each draft year carries its own colour so you always know which board
-     you're looking at. Amber stays reserved for the keeper cost itself. */
-  --yall:        #B9C6D8;
-  --y2024:       #6FAEDD;
-  --y2025:       #F5C563;
-  --y2026:       #63D2B4;
+  /* Positions stay separable but desaturated, so they sit under the metals
+     instead of fighting them. */
+  --qb:          #D7B98D;
+  --rb:          #A2B7A6;
+  --wr:          #9EB2C6;
+  --te:          #BDAAC0;
+  --etc:         #9B9BA6;
+
+  /* Bronze, silver, gold — oldest board to newest. Each year keeps its metal
+     everywhere it appears, so you always know which board is in view. */
+  --yall:        #9B9BA6;
+  --y2024:       #C08552;
+  --y2025:       #C4CAD4;
+  --y2026:       #E3BC5E;
 
   --display: "Barlow Condensed", "Oswald", "Arial Narrow", sans-serif;
   --body:    "Barlow", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -68,7 +74,7 @@ body{
 
 .topbar{
   position:sticky; top:0; z-index:30;
-  background:rgba(13,19,30,.94);
+  background:rgba(12,12,14,.94);
   backdrop-filter:blur(12px);
   -webkit-backdrop-filter:blur(12px);
   border-bottom:1px solid var(--line-soft);
@@ -79,14 +85,15 @@ body{
   padding:10px var(--pad) 0;
   display:flex; flex-direction:column; gap:8px;
 }
-.brand{ display:flex; align-items:baseline; justify-content:space-between; gap:10px; }
+.brand{ display:flex; align-items:center; justify-content:space-between; gap:12px; }
+.brand-id{ min-width:0; display:flex; flex-direction:column; gap:2px; }
 .wordmark{
   font-family:var(--display);
   font-weight:700; font-size:24px; line-height:1;
   letter-spacing:.05em; text-transform:uppercase;
   margin:0; white-space:nowrap;
 }
-.wordmark .k{ color:var(--chalk); }
+.wordmark .k{ color:var(--gold); }
 .sub{
   font-family:var(--mono); font-size:9.5px; font-weight:500;
   letter-spacing:.11em; text-transform:uppercase; color:var(--faint);
@@ -112,7 +119,7 @@ body{
   transition:background .14s ease, color .14s ease;
 }
 .seg button.on{ background:var(--raised); color:var(--text); }
-.seg button:focus-visible{ outline:2px solid var(--chalk); outline-offset:1px; }
+.seg button:focus-visible{ outline:2px solid var(--gold); outline-offset:1px; }
 
 /* Every year wears its own colour all the time — muted when idle, full when
    selected — so the boards stay distinguishable at a glance, not just on tap. */
@@ -126,23 +133,93 @@ body{
   width:16px; height:2px; border-radius:1px; background:var(--yc);
 }
 
-.tabs{
-  display:flex; gap:0; margin:0 calc(var(--pad) * -1); padding:0 var(--pad);
-  overflow-x:auto; scrollbar-width:none; -webkit-overflow-scrolling:touch;
+/* ---------- menu ---------- */
+
+.menubtn{
+  appearance:none; cursor:pointer; flex:none;
+  display:inline-flex; align-items:center; gap:9px;
+  background:var(--card); border:1px solid var(--line); border-radius:8px;
+  color:var(--silver); padding:7px 12px;
+  font-family:var(--display); font-weight:600; font-size:14px;
+  letter-spacing:.09em; text-transform:uppercase;
 }
-.tabs::-webkit-scrollbar{ display:none; }
-.tabs button{
-  appearance:none; background:none; border:0; cursor:pointer;
-  flex:none; white-space:nowrap;
-  font-family:var(--display); font-weight:600; font-size:15px;
-  letter-spacing:.035em; text-transform:uppercase;
-  color:var(--faint); padding:10px 0 11px; margin-right:16px;
-  border-bottom:2px solid transparent;
-  transition:color .14s ease, border-color .14s ease;
+.menubtn:hover{ border-color:var(--gold-dim); color:var(--gold); }
+.menubtn:focus-visible{ outline:2px solid var(--gold); outline-offset:2px; }
+/* three rules drawn from one element */
+.menubtn .bars{
+  display:block; width:15px; height:2px; border-radius:1px;
+  background:currentColor;
+  box-shadow:0 -5px 0 currentColor, 0 5px 0 currentColor;
 }
-.tabs button:last-child{ margin-right:0; }
-.tabs button[aria-selected="true"]{ color:var(--text); border-bottom-color:var(--yc, var(--chalk)); }
-.tabs button:focus-visible{ outline:2px solid var(--chalk); outline-offset:2px; }
+
+.section{
+  font-family:var(--mono); font-size:10px; font-weight:500;
+  letter-spacing:.14em; text-transform:uppercase; color:var(--silver-dim);
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+
+.scrim{
+  position:fixed; inset:0; z-index:50;
+  background:rgba(0,0,0,.62);
+  opacity:0; pointer-events:none;
+  transition:opacity .2s ease;
+}
+.scrim.open{ opacity:1; pointer-events:auto; }
+
+.menu{
+  position:fixed; top:0; left:0; bottom:0; z-index:60;
+  width:min(84vw, 322px);
+  background:var(--card); border-right:1px solid var(--line);
+  display:flex; flex-direction:column; overflow-y:auto;
+  padding-top:env(safe-area-inset-top);
+  /* Parked offscreen rather than visibility:hidden — a transitioned
+     visibility stays computed-hidden long enough to swallow focus() when the
+     drawer opens. `inert` is what keeps the closed drawer out of the tab
+     order and the accessibility tree. */
+  transform:translateX(-100%);
+  transition:transform .22s ease;
+}
+.menu.open{ transform:none; }
+
+.menu-head{
+  padding:18px 18px 15px; border-bottom:1px solid var(--line-soft);
+  display:flex; align-items:flex-start; justify-content:space-between; gap:10px;
+}
+.menu-head .wordmark{ font-size:21px; }
+.menu-close{
+  appearance:none; cursor:pointer; flex:none;
+  background:none; border:1px solid var(--line); border-radius:7px;
+  color:var(--muted); font-size:17px; line-height:1;
+  width:30px; height:30px;
+}
+.menu-close:hover{ color:var(--text); border-color:var(--silver-dim); }
+.menu-close:focus-visible{ outline:2px solid var(--gold); outline-offset:2px; }
+
+.menu-list{ list-style:none; margin:0; padding:8px 0; display:flex; flex-direction:column; }
+.menu-item{
+  appearance:none; background:none; border:0; cursor:pointer; width:100%;
+  text-align:left; padding:13px 16px 13px 15px;
+  border-left:3px solid transparent;
+  display:flex; flex-direction:column; gap:2px;
+  transition:background .14s ease;
+}
+.menu-item .mi-t{
+  font-family:var(--display); font-weight:600; font-size:19px;
+  letter-spacing:.05em; text-transform:uppercase; color:var(--silver);
+  line-height:1.15;
+}
+.menu-item .mi-d{ font-size:12.5px; color:var(--faint); line-height:1.35; }
+.menu-item:hover{ background:var(--raised); }
+.menu-item:focus-visible{ outline:2px solid var(--gold); outline-offset:-2px; }
+.menu-item.on{ border-left-color:var(--gold); background:var(--raised); }
+.menu-item.on .mi-t{ color:var(--gold); }
+
+.menu-foot{
+  margin-top:auto; padding:15px 18px calc(18px + env(safe-area-inset-bottom));
+  border-top:1px solid var(--line-soft);
+  font-family:var(--mono); font-size:10px; letter-spacing:.1em;
+  text-transform:uppercase; color:var(--faint); line-height:1.8;
+}
 
 /* ---------- layout ---------- */
 
@@ -166,7 +243,7 @@ main{ padding:18px var(--pad) 0; }
   padding:13px 40px 13px 14px;
 }
 .searchbox input::placeholder{ color:var(--faint); }
-.searchbox input:focus{ outline:none; border-color:var(--chalk); }
+.searchbox input:focus{ outline:none; border-color:var(--gold); }
 .clear{
   position:absolute; right:6px; top:50%; transform:translateY(-50%);
   appearance:none; border:0; background:none; cursor:pointer;
@@ -187,7 +264,7 @@ main{ padding:18px var(--pad) 0; }
   color:var(--text); font-family:var(--body); font-size:15px;
 }
 .result:hover{ background:var(--raised); }
-.result:focus-visible{ outline:2px solid var(--chalk); outline-offset:1px; }
+.result:focus-visible{ outline:2px solid var(--gold); outline-offset:1px; }
 .result .name{ font-weight:600; line-height:1.2; }
 .result .meta{ font-size:12px; color:var(--muted); margin-top:2px; }
 .result .grow{ flex:1 1 auto; min-width:0; }
@@ -206,8 +283,8 @@ main{ padding:18px var(--pad) 0; }
   text-decoration:underline; text-underline-offset:3px;
   text-decoration-color:var(--line);
 }
-.linkish:hover{ color:var(--chalk); text-decoration-color:var(--chalk-dim); }
-.linkish:focus-visible{ outline:2px solid var(--chalk); outline-offset:2px; border-radius:4px; }
+.linkish:hover{ color:var(--gold); text-decoration-color:var(--gold-dim); }
+.linkish:focus-visible{ outline:2px solid var(--gold); outline-offset:2px; border-radius:4px; }
 .linkish.center{ text-align:center; padding:14px 2px 2px; }
 
 .pos{
@@ -258,7 +335,7 @@ main{ padding:18px var(--pad) 0; }
 
 .auto-note{
   font-size:12.5px; color:var(--muted);
-  background:var(--raised); border-left:2px solid var(--chalk-dim);
+  background:var(--raised); border-left:2px solid var(--gold-dim);
   border-radius:0 6px 6px 0; padding:8px 10px;
 }
 .auto-note b{ color:var(--text); font-weight:600; }
@@ -270,23 +347,23 @@ main{ padding:18px var(--pad) 0; }
   background:var(--raised); border:1px solid var(--line); border-radius:8px;
   color:var(--text); font-size:20px; line-height:1; font-family:var(--body);
 }
-.stepper button:hover{ border-color:var(--chalk); }
+.stepper button:hover{ border-color:var(--gold); }
 .stepper input{
   flex:1 1 auto; min-width:0; text-align:center;
   font-family:var(--mono); font-size:16px; font-weight:600; color:var(--text);
   background:var(--card); border:1px solid var(--line); border-radius:8px;
   padding:10px 8px;
 }
-.stepper input:focus{ outline:none; border-color:var(--chalk); }
+.stepper input:focus{ outline:none; border-color:var(--gold); }
 
 /* ---------- the cost readout ---------- */
 
 .cost{
   border-radius:12px; padding:16px;
   background:
-    linear-gradient(180deg, rgba(245,197,99,.10), rgba(245,197,99,0) 70%),
+    linear-gradient(180deg, rgba(227,188,94,.11), rgba(227,188,94,0) 70%),
     var(--raised);
-  border:1px solid var(--chalk-dim);
+  border:1px solid var(--gold-dim);
   text-align:center;
 }
 .cost.void{ background:var(--raised); border-color:var(--stop); }
@@ -296,7 +373,7 @@ main{ padding:18px var(--pad) 0; }
 }
 .cost .big{
   font-family:var(--display); font-weight:700; font-size:52px; line-height:.94;
-  letter-spacing:.01em; color:var(--chalk); font-variant-numeric:tabular-nums;
+  letter-spacing:.01em; color:var(--gold); font-variant-numeric:tabular-nums;
 }
 .cost.void .big{ font-size:30px; color:var(--stop); }
 .cost .tail{ font-size:13.5px; color:var(--muted); margin-top:7px; }
@@ -311,10 +388,10 @@ main{ padding:18px var(--pad) 0; }
 }
 .flag .dot{ width:7px; height:7px; border-radius:50%; margin-top:6px; flex:none; }
 .flag b{ font-weight:600; }
-.flag.warn{ background:rgba(245,155,87,.11); color:#F6C39B; }
+.flag.warn{ background:rgba(223,146,67,.11); color:#E8BA8A; }
 .flag.warn .dot{ background:var(--warn); }
 .flag.warn b{ color:var(--warn); }
-.flag.stop{ background:rgba(239,107,132,.11); color:#F5A9B7; }
+.flag.stop{ background:rgba(208,106,106,.11); color:#E5AAAA; }
 .flag.stop .dot{ background:var(--stop); }
 .flag.stop b{ color:var(--stop); }
 .flag.info{ background:var(--raised); color:var(--muted); }
@@ -342,9 +419,9 @@ main{ padding:18px var(--pad) 0; }
   letter-spacing:.05em; color:var(--muted); line-height:1.25;
 }
 .rung .what{ font-size:12.5px; color:var(--faint); }
-.rung.on .node{ border-color:var(--chalk); background:var(--chalk); color:#1B1405; }
+.rung.on .node{ border-color:var(--gold); background:var(--gold); color:#171306; }
 .rung.on .yr{ color:var(--text); }
-.rung.on .what{ color:var(--chalk); }
+.rung.on .what{ color:var(--gold); }
 .rung.end .node{ border-color:var(--stop); color:var(--stop); border-style:dashed; }
 .rung.end .yr{ color:var(--stop); }
 .rung.past .node{ opacity:.6; }
@@ -364,7 +441,7 @@ select{
   background:var(--card); border:1px solid var(--line); border-radius:var(--r);
   padding:13px 38px 13px 14px;
 }
-select:focus{ outline:none; border-color:var(--chalk); }
+select:focus{ outline:none; border-color:var(--gold); }
 
 .roster-head{
   display:flex; align-items:baseline; justify-content:space-between;
@@ -393,7 +470,7 @@ thead th{
 }
 tbody td{ padding:9px 8px; border-bottom:1px solid var(--line-soft); vertical-align:middle; }
 tbody tr:last-child td{ border-bottom:0; }
-tbody tr.kept{ background:rgba(86,214,168,.05); }
+tbody tr.kept{ background:rgba(196,202,212,.05); }
 .c-rd,.c-pk{
   font-family:var(--mono); font-size:13px; color:var(--muted);
   font-variant-numeric:tabular-nums; width:1%; white-space:nowrap;
@@ -406,7 +483,7 @@ tbody tr.kept{ background:rgba(86,214,168,.05); }
 .kchip{
   display:inline-block; margin-left:6px; vertical-align:1px;
   font-family:var(--mono); font-size:9px; font-weight:600; letter-spacing:.08em;
-  color:var(--keep); background:rgba(86,214,168,.14);
+  color:var(--keep); background:rgba(196,202,212,.13);
   border-radius:3px; padding:2px 4px;
 }
 
@@ -447,6 +524,25 @@ tbody tr.rsep:first-child td{ border-top:0; }
 .hist-row.absent .hist-main .t{ color:var(--faint); font-weight:500; }
 .hist-foot{ padding:12px 14px; border-top:1px solid var(--line); }
 
+/* the same history, nested inside the calculator so the cost shows its working */
+.khist{
+  border:1px solid var(--line-soft); border-radius:9px;
+  overflow:hidden; background:var(--raised);
+}
+.khist .hist-row{ padding:10px 12px; border-bottom-color:var(--line-soft); }
+.khist .hist-row:last-child{ border-bottom:0; }
+.khist .hist-yr{ font-size:17px; width:42px; }
+.khist .hist-main .t{ font-size:13.5px; }
+.khist .hist-main .s{ font-size:11.5px; }
+.khist .hist-slot{ font-size:12.5px; }
+.khist-sum{
+  padding:10px 12px; background:var(--card);
+  border-top:1px solid var(--line);
+  font-size:12.5px; color:var(--muted); line-height:1.45;
+}
+.khist-sum b{ color:var(--text); font-weight:600; }
+.khist-sum .n{ color:var(--gold); font-weight:600; }
+
 /* ---------- rules ---------- */
 
 details.rules{
@@ -466,7 +562,7 @@ details.rules[open] summary{ color:var(--text); border-bottom:1px solid var(--li
 .rules-body{ padding:4px 15px 15px; font-size:13.5px; color:var(--muted); }
 .rules-body h3{
   font-family:var(--mono); font-size:10px; font-weight:500;
-  letter-spacing:.14em; text-transform:uppercase; color:var(--chalk);
+  letter-spacing:.14em; text-transform:uppercase; color:var(--gold);
   margin:15px 0 5px;
 }
 .rules-body p{ margin:0 0 7px; }
@@ -493,22 +589,39 @@ footer{
 <div class="topbar">
   <div class="topbar-inner">
     <div class="brand">
-      <h1 class="wordmark"><span class="k">Keeper</span> Ledger</h1>
-      <span class="sub">12 Teams · 15 Rds</span>
+      <div class="brand-id">
+        <h1 class="wordmark"><span class="k">Keeper</span> Ledger</h1>
+        <span class="section" id="sectionLabel">Keeper Calculator</span>
+      </div>
+      <button class="menubtn" id="menuBtn" type="button"
+              aria-expanded="false" aria-controls="menu" aria-haspopup="menu">
+        <span class="bars" aria-hidden="true"></span>Menu
+      </button>
     </div>
     <div class="seg years" role="group" aria-label="Draft year" id="yearSeg"></div>
-    <nav class="tabs" role="tablist" aria-label="Sections">
-      <button role="tab" id="tab-calc" aria-selected="true" aria-controls="panel-calc">Keeper Cost</button>
-      <button role="tab" id="tab-history" aria-selected="false" aria-controls="panel-history">Draft History</button>
-      <button role="tab" id="tab-roster" aria-selected="false" aria-controls="panel-roster">Rosters</button>
-    </nav>
   </div>
 </div>
 
+<div class="scrim" id="scrim"></div>
+
+<nav class="menu" id="menu" aria-label="Sections" inert>
+  <div class="menu-head">
+    <h2 class="wordmark"><span class="k">Keeper</span> Ledger</h2>
+    <button class="menu-close" id="menuClose" type="button" aria-label="Close menu">&times;</button>
+  </div>
+  <ul class="menu-list" id="menuList"></ul>
+  <div class="menu-foot">
+    12 Teams · 15 Rounds<br>
+    2024 &amp; 2025 boards loaded
+  </div>
+</nav>
+
 <main class="wrap">
 
-  <!-- ===================== KEEPER COST CALCULATOR ===================== -->
-  <section class="panel" id="panel-calc" role="tabpanel" aria-labelledby="tab-calc">
+  <!-- ===================== KEEPER CALCULATOR ===================== -->
+  <!-- Everything keeper-related lives here: the cost tool, the player's own
+       keeper history, and the league rules. -->
+  <section class="panel" id="panel-calc" aria-labelledby="sectionLabel">
 
     <div id="calcPick">
       <p class="eyebrow" id="calcScope">Who are you thinking of keeping?</p>
@@ -525,10 +638,37 @@ footer{
     </div>
 
     <div id="calcDetail"></div>
+
+    <details class="rules">
+      <summary>League Keeper Rules</summary>
+      <div class="rules-body">
+        <h3>Number of keepers</h3>
+        <p>Each team may keep up to <b>2 players</b> from their previous season's roster.</p>
+
+        <h3>Three-season term limit</h3>
+        <p>A player can be on a roster for a maximum of <b>3 total seasons</b>, counting the season they were acquired (draft, trade, or free agency). After the third season the player returns to the general draft pool.</p>
+        <p>Acquired for 2025 → eligible 2025, 2026, 2027 → released for 2028.</p>
+
+        <h3>Keeper cost</h3>
+        <p>Players drafted in the <b>1st or 2nd round always cost a 1st-round pick</b>, every season.</p>
+        <p>Everyone else — 1st keeper season costs <code>round − 1</code>. 2nd keeper season costs <code>previous cost − 2</code>.</p>
+        <p>Drafted R5 → kept for a 4th → kept for a 2nd → back to the pool.</p>
+
+        <h3>Waiver wire — the "OBJ Rule"</h3>
+        <p>A player picked up off waivers costs <b>one round higher than their ADP</b> in the upcoming draft. Per the rulebook's example, a <b>2nd-round ADP costs a 3rd-round pick</b>.</p>
+        <p>An ADP of <b>Round 10 or later</b> costs only a final-round pick.</p>
+
+        <h3>Waiver eligibility</h3>
+        <p>The player must have been on your roster for at least <b>3 consecutive active play weeks</b>. They do not need to have started.</p>
+
+        <h3>Injury exception</h3>
+        <p>If a player was rostered the entire season but accrued points in <b>3 games or fewer due to injury</b>, that season does not count toward the three-season limit. <b>Keep in the IR slot.</b></p>
+      </div>
+    </details>
   </section>
 
   <!-- ===================== DRAFT HISTORY ===================== -->
-  <section class="panel" id="panel-history" role="tabpanel" aria-labelledby="tab-history" hidden>
+  <section class="panel" id="panel-history" aria-label="Draft history" hidden>
     <p class="eyebrow" id="histScope">Every pick, every year</p>
     <div class="searchbox">
       <input id="qh" type="search" inputmode="search" autocomplete="off"
@@ -541,7 +681,7 @@ footer{
   </section>
 
   <!-- ===================== TEAM ROSTERS ===================== -->
-  <section class="panel" id="panel-roster" role="tabpanel" aria-labelledby="tab-roster" hidden>
+  <section class="panel" id="panel-roster" aria-label="Team rosters" hidden>
     <!-- one franchise's board for the selected year -->
     <p class="eyebrow">Franchise</p>
     <div class="selectwrap">
@@ -550,32 +690,7 @@ footer{
     <div id="rosterOut"></div>
   </section>
 
-  <details class="rules">
-    <summary>League Keeper Rules</summary>
-    <div class="rules-body">
-      <h3>Number of keepers</h3>
-      <p>Each team may keep up to <b>2 players</b> from their previous season's roster.</p>
 
-      <h3>Three-season term limit</h3>
-      <p>A player can be on a roster for a maximum of <b>3 total seasons</b>, counting the season they were acquired (draft, trade, or free agency). After the third season the player returns to the general draft pool.</p>
-      <p>Acquired for 2025 → eligible 2025, 2026, 2027 → released for 2028.</p>
-
-      <h3>Keeper cost</h3>
-      <p>Players drafted in the <b>1st or 2nd round always cost a 1st-round pick</b>, every season.</p>
-      <p>Everyone else — 1st keeper season costs <code>round − 1</code>. 2nd keeper season costs <code>previous cost − 2</code>.</p>
-      <p>Drafted R5 → kept for a 4th → kept for a 2nd → back to the pool.</p>
-
-      <h3>Waiver wire — the "OBJ Rule"</h3>
-      <p>A player picked up off waivers costs <b>one round higher than their ADP</b> in the upcoming draft. Per the rulebook's example, a <b>2nd-round ADP costs a 3rd-round pick</b>.</p>
-      <p>An ADP of <b>Round 10 or later</b> costs only a final-round pick.</p>
-
-      <h3>Waiver eligibility</h3>
-      <p>The player must have been on your roster for at least <b>3 consecutive active play weeks</b>. They do not need to have started.</p>
-
-      <h3>Injury exception</h3>
-      <p>If a player was rostered the entire season but accrued points in <b>3 games or fewer due to injury</b>, that season does not count toward the three-season limit. <b>Keep in the IR slot.</b></p>
-    </div>
-  </details>
 
   <footer>
     Transcribed from the ESPN draft boards<br>
@@ -1140,27 +1255,75 @@ function renderYearSeg(){
     });
     seg.appendChild(b);
   }
-  // the active tab underline picks up the year colour too
-  const yc = state.tab === "roster" || state.year !== "all"
-    ? yearVar(activeYear()) : "var(--yall)";
-  document.querySelector(".tabs").style.setProperty("--yc", yc);
 }
 
-/* ---- tabs ---- */
+/* ---- menu ---- */
 
-function setTab(tab){
-  // the roster board is always one specific year
-  if (tab === "roster" && state.year === "all") state.year = LATEST;
-  state.tab = tab;
-  for (const t of ["calc","history","roster"]){
-    $(`#tab-${t}`).setAttribute("aria-selected", String(t === tab));
-    $(`#panel-${t}`).hidden = t !== tab;
+const SECTIONS = [
+  { id:"calc",    name:"Keeper Calculator", desc:"What a player costs to keep, their keeper history, and the league rules" },
+  { id:"history", name:"Draft History",     desc:"Every board, round by round — and any player's history across years" },
+  { id:"roster",  name:"Team Rosters",      desc:"One franchise's draft at a time" }
+];
+
+function renderMenu(){
+  const list = $("#menuList");
+  list.textContent = "";
+  for (const s of SECTIONS){
+    const li = el("li");
+    const b = el("button", "menu-item" + (state.tab === s.id ? " on" : ""));
+    b.type = "button";
+    if (state.tab === s.id) b.setAttribute("aria-current", "true");
+    b.appendChild(el("span", "mi-t", s.name));
+    b.appendChild(el("span", "mi-d", s.desc));
+    // return focus to the menu button — the item itself is about to go inert
+    b.addEventListener("click", () => { closeMenu(true); setSection(s.id); });
+    li.appendChild(b);
+    list.appendChild(li);
   }
-  render();
 }
-$("#tab-calc").addEventListener("click", () => setTab("calc"));
-$("#tab-history").addEventListener("click", () => setTab("history"));
-$("#tab-roster").addEventListener("click", () => setTab("roster"));
+
+const menuEl = $("#menu"), scrimEl = $("#scrim"), menuBtn = $("#menuBtn");
+
+function openMenu(){
+  renderMenu();
+  menuEl.classList.add("open");
+  scrimEl.classList.add("open");
+  menuEl.removeAttribute("inert");
+  menuBtn.setAttribute("aria-expanded", "true");
+  document.body.style.overflow = "hidden";
+  // focus() is a no-op on a visibility:hidden element, and the class we just
+  // added hasn't been recalculated yet. Reading a layout property flushes the
+  // style so the drawer is genuinely visible before we move focus into it.
+  void menuEl.offsetWidth;
+  (menuEl.querySelector(".menu-item.on") || menuEl.querySelector(".menu-item"))?.focus();
+}
+function closeMenu(returnFocus){
+  menuEl.classList.remove("open");
+  scrimEl.classList.remove("open");
+  // inert keeps the closed drawer out of the tab order and the a11y tree
+  menuEl.setAttribute("inert", "");
+  menuBtn.setAttribute("aria-expanded", "false");
+  document.body.style.overflow = "";
+  if (returnFocus) menuBtn.focus();
+}
+menuBtn.addEventListener("click", () => {
+  menuEl.classList.contains("open") ? closeMenu(true) : openMenu();
+});
+$("#menuClose").addEventListener("click", () => closeMenu(true));
+scrimEl.addEventListener("click", () => closeMenu(true));
+document.addEventListener("keydown", e => {
+  if (e.key === "Escape" && menuEl.classList.contains("open")) closeMenu(true);
+});
+
+function setSection(id){
+  // the roster board is always one specific year
+  if (id === "roster" && state.year === "all") state.year = LATEST;
+  state.tab = id;
+  for (const s of SECTIONS) $(`#panel-${s.id}`).hidden = s.id !== id;
+  $("#sectionLabel").textContent = SECTIONS.find(s => s.id === id).name;
+  render();
+  window.scrollTo({ top:0, behavior:"smooth" });
+}
 
 /* ---- search, shared by both search boxes ---- */
 
@@ -1350,40 +1513,71 @@ function renderCostCard(e){
   }
 
   card.appendChild(body);
-
-  if (!manual){
-    const foot = el("div", "hist-foot");
-    const link = el("button", "linkish", `See ${e.name}'s full draft history →`);
-    link.type = "button";
-    link.addEventListener("click", () => {
-      state.histName = norm(e.name); state.histQ = "";
-      $("#qh").value = ""; $("#qhClear").hidden = true;
-      setTab("history"); window.scrollTo({ top:0, behavior:"smooth" });
-    });
-    foot.appendChild(link);
-    card.appendChild(foot);
-  }
   return card;
+}
+
+/**
+ * The player's keeper history, shown inside the calculator so the cost can
+ * show its working: every board they appear on, whether each pick was a draft
+ * or a keeper, and what that makes the season count.
+ */
+function keeperHistory(e, trace){
+  const byYear = BY_NAME.get(norm(e.name)) || {};
+  const wrap = el("div", "khist");
+
+  for (const y of YEARS){
+    const ent = byYear[y];
+    const row = el("div", "hist-row" + (ent ? "" : " absent"));
+    row.style.setProperty("--yc", yearVar(y));
+
+    const yr   = el("div", "hist-yr", y);
+    const main = el("div", "hist-main");
+    const slot = el("div", "hist-slot");
+
+    if (ent){
+      const seasonNo = Number(y) - Number(trace.origin.year) + 1;
+      const onClock  = seasonNo >= 1 && seasonNo <= 3 && !trace.unresolved;
+      main.innerHTML = `<div class="t">${esc(ent.team)}</div>
+        <div class="s">${ent.kept ? "Kept" : "Drafted"}${onClock ? ` · roster season ${seasonNo} of 3` : ""}</div>`;
+      slot.innerHTML = `R${ent.rd}<span style="color:var(--faint)">.${String(ent.pk).padStart(2,"0")}</span>`;
+    } else if (!LEAGUE.years[y].picks.length){
+      main.innerHTML = `<div class="t">Draft hasn't happened yet</div>`;
+    } else {
+      main.innerHTML = `<div class="t">Not on this board</div>
+        <div class="s">Undrafted, or picked up off waivers</div>`;
+    }
+    row.append(yr, main, slot);
+    wrap.appendChild(row);
+  }
+
+  const sum = el("div", "khist-sum");
+  if (trace.unresolved){
+    sum.innerHTML = `Flagged <b>kept</b> in ${e.year}, but they aren't on the
+      ${Number(e.year) - 1} board — so they came off waivers or by trade mid-season.
+      That makes ${Number(e.year) - 1} roster season 1. Set the keeper season by hand
+      below, or price them under the waiver rule.`;
+  } else if (e.kept){
+    sum.innerHTML = `Originally drafted <b>${trace.origin.year} Round ${trace.origin.rd}</b>
+      by ${esc(trace.origin.team)}. ${e.year} was roster season
+      <span class="n">${trace.seasonsRostered} of 3</span>.`;
+  } else {
+    sum.innerHTML = `Drafted fresh in <b>${e.year}</b>, so the three-season clock
+      started over. ${e.year} was roster season <span class="n">1 of 3</span>.`;
+  }
+  wrap.appendChild(sum);
+  return wrap;
 }
 
 function draftedBlock(ctx){
   const { e, manual, origin, trace, origRound, targetYear, autoSeason, season } = ctx;
   const out = [];
 
-  /* what the boards already told us */
-  if (!manual && e.kept && !trace.unresolved){
-    const note = el("div", "auto-note");
-    note.innerHTML = `ESPN flagged this as a <b>kept</b> pick. Tracing it back:
-      originally drafted <b>${origin.year} Round ${origin.rd}</b> by ${esc(origin.team)},
-      so ${e.year} was roster season <b>${trace.seasonsRostered}</b> of 3.`;
-    out.push(note);
-  } else if (!manual && e.kept && trace.unresolved){
-    const note = el("div", "auto-note");
-    note.innerHTML = `ESPN flagged this as a <b>kept</b> pick, but they weren't on the
-      ${Number(e.year) - 1} draft board — so they were picked up mid-season off waivers
-      or by trade. ${Number(e.year) - 1} was roster season 1. Set the keeper season by
-      hand below, or switch to <b>Waiver wire</b> to price them by ADP.`;
-    out.push(note);
+  /* the boards, and what they make of the season count */
+  if (!manual){
+    const hf = el("div", "field");
+    hf.appendChild(el("div", "lbl", "Keeper history"));
+    hf.appendChild(keeperHistory(e, trace));
+    out.push(hf);
   }
 
   /* manual mode needs the original round typed in */
@@ -1724,7 +1918,7 @@ function playerHistory(key){
       const latest = [...YEARS].reverse().map(y => byYear[y]).find(Boolean);
       state.calcPick = latest.id; state.manual = false;
       state.source = "draft"; state.season = null;
-      setTab("calc"); window.scrollTo({ top:0, behavior:"smooth" });
+      setSection("calc");
     });
     foot.appendChild(link);
     card.appendChild(foot);
@@ -1823,5 +2017,6 @@ function render(){
   else                              renderRoster();
 }
 
+renderMenu();
 render();
 </script>

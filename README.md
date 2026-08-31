@@ -78,27 +78,28 @@ exactly the round the rules predict from their 2024 draft slot.
 
 ## Deploying
 
-The app is a single static file, so any static host works. There is nothing to
-build.
+**Live at https://jodez30.github.io/Claude/**
 
-**GitHub Pages requires a public repository** on a free plan. `Jodez30/Claude`
-is currently private, so Pages is unavailable on it until either the repo is
-made public or the account is on GitHub Pro. Pages also cannot be switched on
-through the API from this setup — the Pages REST endpoint is unreachable and the
-Actions `GITHUB_TOKEN` is not granted the Pages permission — so the switch has
-to be flipped in the web UI once.
+GitHub Pages serves this repo with **Source: *Deploy from a branch*** pointed at
+`claude/fantasy-keeper-league-app-cy241r` and `/ (root)`. Every push to that
+branch triggers GitHub's own `pages-build-deployment` run and republishes the
+site — there is nothing to build and no workflow to invoke.
 
-Once the repo is public:
+`.nojekyll` keeps Pages from running the files through Jekyll. The app is plain
+HTML that Jekyll would only copy anyway, but skipping it removes any chance of
+Liquid syntax (`{{`, `{%`) inside the JavaScript being mangled, and makes the
+build faster.
 
-**Settings → Pages → Source: *Deploy from a branch* → branch → `/ (root)` → Save.**
+`.github/workflows/pages.yml` is unused in this setup. It exists only for the
+alternative *GitHub Actions* Pages source, and is manual-trigger-only so it
+never runs or fails on its own. If you switch the source, run it from the
+Actions tab.
 
-That serves `index.html` at the site root and republishes on every push. Nothing
-else is needed; `.github/workflows/pages.yml` is only for the *GitHub Actions*
-Pages source and is manual-trigger-only so it doesn't fail red while Pages is
-off.
+Note that Pages serves the whole branch root, so anything else committed
+alongside `index.html` is reachable on the site too.
 
-**Anything else** — `netlify deploy --prod`, drag the folder onto Netlify, or
-`python3 -m http.server` locally.
+**Anywhere else** — `netlify deploy --prod`, drag the folder onto Netlify, or
+`python3 -m http.server` locally. It's one static file.
 
 ## Development
 

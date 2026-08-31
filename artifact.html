@@ -32,6 +32,13 @@
   --te:          #C79BF0;
   --etc:         #8A99B2;
 
+  /* Each draft year carries its own colour so you always know which board
+     you're looking at. Amber stays reserved for the keeper cost itself. */
+  --yall:        #B9C6D8;
+  --y2024:       #6FAEDD;
+  --y2025:       #F5C563;
+  --y2026:       #63D2B4;
+
   --display: "Barlow Condensed", "Oswald", "Arial Narrow", sans-serif;
   --body:    "Barlow", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --mono:    "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
@@ -105,19 +112,36 @@ body{
   transition:background .14s ease, color .14s ease;
 }
 .seg button.on{ background:var(--raised); color:var(--text); }
-.seg.years button.on{ color:var(--chalk); }
 .seg button:focus-visible{ outline:2px solid var(--chalk); outline-offset:1px; }
 
-.tabs{ display:flex; gap:0; margin:0 calc(var(--pad) * -1); padding:0 var(--pad); }
+/* Every year wears its own colour all the time — muted when idle, full when
+   selected — so the boards stay distinguishable at a glance, not just on tap. */
+.seg.years button{
+  position:relative; padding-bottom:11px;
+  color:color-mix(in srgb, var(--yc) 50%, var(--faint));
+}
+.seg.years button.on{ color:var(--yc); }
+.seg.years button.on::after{
+  content:""; position:absolute; left:50%; bottom:4px; transform:translateX(-50%);
+  width:16px; height:2px; border-radius:1px; background:var(--yc);
+}
+
+.tabs{
+  display:flex; gap:0; margin:0 calc(var(--pad) * -1); padding:0 var(--pad);
+  overflow-x:auto; scrollbar-width:none; -webkit-overflow-scrolling:touch;
+}
+.tabs::-webkit-scrollbar{ display:none; }
 .tabs button{
   appearance:none; background:none; border:0; cursor:pointer;
-  font-family:var(--display); font-weight:600; font-size:16px;
-  letter-spacing:.06em; text-transform:uppercase;
-  color:var(--faint); padding:10px 0 11px; margin-right:22px;
+  flex:none; white-space:nowrap;
+  font-family:var(--display); font-weight:600; font-size:15px;
+  letter-spacing:.035em; text-transform:uppercase;
+  color:var(--faint); padding:10px 0 11px; margin-right:16px;
   border-bottom:2px solid transparent;
   transition:color .14s ease, border-color .14s ease;
 }
-.tabs button[aria-selected="true"]{ color:var(--text); border-bottom-color:var(--chalk); }
+.tabs button:last-child{ margin-right:0; }
+.tabs button[aria-selected="true"]{ color:var(--text); border-bottom-color:var(--yc, var(--chalk)); }
 .tabs button:focus-visible{ outline:2px solid var(--chalk); outline-offset:2px; }
 
 /* ---------- layout ---------- */
@@ -172,7 +196,19 @@ main{ padding:18px var(--pad) 0; }
   font-family:var(--mono); font-size:13px; font-weight:500;
   color:var(--text); text-align:right; white-space:nowrap;
 }
-.result .coord small{ display:block; font-size:10px; color:var(--faint); letter-spacing:.08em; }
+.result .coord small{ display:block; font-size:10px; color:var(--yc, var(--faint)); letter-spacing:.08em; }
+
+/* a plain text button for the escape hatches (manual pricing, cross-links) */
+.linkish{
+  appearance:none; background:none; border:0; cursor:pointer; width:100%;
+  text-align:left; padding:12px 2px 0;
+  font-family:var(--body); font-size:13.5px; color:var(--muted);
+  text-decoration:underline; text-underline-offset:3px;
+  text-decoration-color:var(--line);
+}
+.linkish:hover{ color:var(--chalk); text-decoration-color:var(--chalk-dim); }
+.linkish:focus-visible{ outline:2px solid var(--chalk); outline-offset:2px; border-radius:4px; }
+.linkish.center{ text-align:center; padding:14px 2px 2px; }
 
 .pos{
   font-family:var(--mono); font-size:10px; font-weight:600;
@@ -374,6 +410,43 @@ tbody tr.kept{ background:rgba(86,214,168,.05); }
   border-radius:3px; padding:2px 4px;
 }
 
+/* ---------- draft history ---------- */
+
+/* round dividers turn one long board into 15 readable blocks */
+tr.rsep td{
+  font-family:var(--display); font-weight:600; font-size:13px;
+  letter-spacing:.11em; text-transform:uppercase; color:var(--yc, var(--muted));
+  background:var(--raised); padding:7px 11px;
+  border-top:1px solid var(--line); border-bottom:1px solid var(--line);
+}
+tbody tr.rsep:first-child td{ border-top:0; }
+.c-ft{ font-size:11.5px; color:var(--muted); }
+
+.hist{
+  background:var(--card); border:1px solid var(--line);
+  border-radius:14px; overflow:hidden; margin-top:12px;
+}
+.hist-row{
+  display:flex; gap:12px; align-items:center;
+  padding:12px 14px; border-bottom:1px solid var(--line-soft);
+}
+.hist-row:last-of-type{ border-bottom:0; }
+.hist-yr{
+  font-family:var(--display); font-weight:700; font-size:19px;
+  letter-spacing:.03em; color:var(--yc); width:46px; flex:none;
+  font-variant-numeric:tabular-nums;
+}
+.hist-main{ flex:1 1 auto; min-width:0; }
+.hist-main .t{ font-weight:600; font-size:14px; line-height:1.25; }
+.hist-main .s{ font-size:12px; color:var(--faint); }
+.hist-slot{
+  font-family:var(--mono); font-size:13px; color:var(--text);
+  white-space:nowrap; text-align:right;
+}
+.hist-row.absent .hist-yr{ opacity:.5; }
+.hist-row.absent .hist-main .t{ color:var(--faint); font-weight:500; }
+.hist-foot{ padding:12px 14px; border-top:1px solid var(--line); }
+
 /* ---------- rules ---------- */
 
 details.rules{
@@ -425,35 +498,51 @@ footer{
     </div>
     <div class="seg years" role="group" aria-label="Draft year" id="yearSeg"></div>
     <nav class="tabs" role="tablist" aria-label="Sections">
-      <button role="tab" id="tab-lookup" aria-selected="true" aria-controls="panel-lookup">Player Lookup</button>
-      <button role="tab" id="tab-roster" aria-selected="false" aria-controls="panel-roster">Team Rosters</button>
+      <button role="tab" id="tab-calc" aria-selected="true" aria-controls="panel-calc">Keeper Cost</button>
+      <button role="tab" id="tab-history" aria-selected="false" aria-controls="panel-history">Draft History</button>
+      <button role="tab" id="tab-roster" aria-selected="false" aria-controls="panel-roster">Rosters</button>
     </nav>
   </div>
 </div>
 
 <main class="wrap">
 
-  <!-- ===================== PLAYER LOOKUP ===================== -->
-  <section class="panel" id="panel-lookup" role="tabpanel" aria-labelledby="tab-lookup">
+  <!-- ===================== KEEPER COST CALCULATOR ===================== -->
+  <section class="panel" id="panel-calc" role="tabpanel" aria-labelledby="tab-calc">
 
-    <div id="lookupSearch">
-      <p class="eyebrow" id="searchScope">Search every drafted player</p>
+    <div id="calcPick">
+      <p class="eyebrow" id="calcScope">Who are you thinking of keeping?</p>
       <div class="searchbox">
-        <input id="q" type="search" inputmode="search" autocomplete="off"
+        <input id="qc" type="search" inputmode="search" autocomplete="off"
                autocorrect="off" autocapitalize="words" spellcheck="false"
-               placeholder="Start typing a player, team, or position…"
-               aria-label="Search drafted players">
-        <button class="clear" id="qClear" type="button" aria-label="Clear search" hidden>&times;</button>
+               placeholder="Search a drafted player…"
+               aria-label="Search drafted players to price as a keeper">
+        <button class="clear" id="qcClear" type="button" aria-label="Clear search" hidden>&times;</button>
       </div>
-      <ul class="results" id="results"></ul>
-      <div class="empty" id="lookupEmpty" hidden></div>
+      <ul class="results" id="calcResults"></ul>
+      <div class="empty" id="calcEmpty" hidden></div>
+      <button class="linkish" id="manualBtn" type="button">Not on a draft board? Price a pickup by hand →</button>
     </div>
 
-    <div id="lookupDetail"></div>
+    <div id="calcDetail"></div>
+  </section>
+
+  <!-- ===================== DRAFT HISTORY ===================== -->
+  <section class="panel" id="panel-history" role="tabpanel" aria-labelledby="tab-history" hidden>
+    <p class="eyebrow" id="histScope">Every pick, every year</p>
+    <div class="searchbox">
+      <input id="qh" type="search" inputmode="search" autocomplete="off"
+             autocorrect="off" autocapitalize="words" spellcheck="false"
+             placeholder="Search a player, team, or position…"
+             aria-label="Search the draft boards">
+      <button class="clear" id="qhClear" type="button" aria-label="Clear search" hidden>&times;</button>
+    </div>
+    <div id="histOut"></div>
   </section>
 
   <!-- ===================== TEAM ROSTERS ===================== -->
   <section class="panel" id="panel-roster" role="tabpanel" aria-labelledby="tab-roster" hidden>
+    <!-- one franchise's board for the selected year -->
     <p class="eyebrow">Franchise</p>
     <div class="selectwrap">
       <select id="teamSel" aria-label="Select a team"></select>
@@ -994,70 +1083,86 @@ function traceOrigin(entry){
 
 /* ============================================================
    4. STATE + RENDER
+
+   Three tabs, one shared year selector:
+     calc    — price a keeper (search a player, or enter one by hand)
+     history — browse the boards, or one player's history across years
+     roster  — one franchise's board
    ============================================================ */
 
+const LATEST = [...YEARS].reverse().find(y => LEAGUE.years[y].picks.length) || YEARS[0];
+
 const state = {
-  tab: "lookup",
-  year: "all",                 // "all" | "2024" | "2025" | "2026"
-  rosterYear: YEARS.includes("2025") ? "2025" : YEARS[0],
-  team: null,
-  q: "",
-  selected: null,              // entry id
-  source: "draft",             // "draft" | "waiver"
-  season: null,                // manual override of keeper season
-  adp: 5
+  tab: "calc",
+  year: "all",            // "all" is offered on calc + history only
+
+  // calculator
+  calcQ: "", calcPick: null, manual: false,
+  source: "draft",        // "draft" | "waiver"
+  season: null,           // manual override of the keeper season
+  adp: 5,
+  manualRound: 5,
+
+  // draft history
+  histQ: "", histName: null,
+
+  // rosters
+  team: null
 };
 
 const $  = s => document.querySelector(s);
 const el = (t, cls, txt) => { const n=document.createElement(t); if(cls) n.className=cls; if(txt!=null) n.textContent=txt; return n; };
-const posVar = p => `var(--${(p||"").toLowerCase()}, var(--etc))`;
+const posVar  = p => `var(--${(p||"").toLowerCase()}, var(--etc))`;
+const yearVar = y => `var(--y${y}, var(--yall))`;
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;" }[c]));
+
+/** The year the current tab is actually showing. Rosters can't show "all". */
+const activeYear = () => (state.year === "all" ? LATEST : state.year);
 
 /* ---- year segmented control ---- */
 
 function renderYearSeg(){
   const seg = $("#yearSeg");
   seg.textContent = "";
-  const opts = state.tab === "lookup" ? ["all", ...YEARS] : YEARS;
-  const active = state.tab === "lookup" ? state.year : state.rosterYear;
+  const opts   = state.tab === "roster" ? YEARS : ["all", ...YEARS];
+  const active = state.tab === "roster" ? activeYear() : state.year;
+
   for (const y of opts){
     const b = el("button", y === active ? "on" : null, y === "all" ? "All" : y);
     b.type = "button";
+    b.style.setProperty("--yc", y === "all" ? "var(--yall)" : yearVar(y));
     b.setAttribute("aria-pressed", String(y === active));
     b.addEventListener("click", () => {
-      if (state.tab === "lookup"){ state.year = y; state.selected = null; }
-      else { state.rosterYear = y; }
+      state.year = y;
+      state.calcPick = null; state.manual = false; state.season = null;
+      state.histName = null;
       render();
     });
     seg.appendChild(b);
   }
+  // the active tab underline picks up the year colour too
+  const yc = state.tab === "roster" || state.year !== "all"
+    ? yearVar(activeYear()) : "var(--yall)";
+  document.querySelector(".tabs").style.setProperty("--yc", yc);
 }
 
 /* ---- tabs ---- */
 
 function setTab(tab){
+  // the roster board is always one specific year
+  if (tab === "roster" && state.year === "all") state.year = LATEST;
   state.tab = tab;
-  $("#tab-lookup").setAttribute("aria-selected", String(tab === "lookup"));
-  $("#tab-roster").setAttribute("aria-selected", String(tab === "roster"));
-  $("#panel-lookup").hidden = tab !== "lookup";
-  $("#panel-roster").hidden = tab !== "roster";
+  for (const t of ["calc","history","roster"]){
+    $(`#tab-${t}`).setAttribute("aria-selected", String(t === tab));
+    $(`#panel-${t}`).hidden = t !== tab;
+  }
   render();
 }
-$("#tab-lookup").addEventListener("click", () => setTab("lookup"));
+$("#tab-calc").addEventListener("click", () => setTab("calc"));
+$("#tab-history").addEventListener("click", () => setTab("history"));
 $("#tab-roster").addEventListener("click", () => setTab("roster"));
 
-/* ---- search ---- */
-
-$("#q").addEventListener("input", e => {
-  state.q = e.target.value;
-  state.selected = null;
-  $("#qClear").hidden = !state.q;
-  render();
-});
-$("#qClear").addEventListener("click", () => {
-  state.q = ""; $("#q").value = ""; $("#qClear").hidden = true;
-  state.selected = null; render(); $("#q").focus();
-});
+/* ---- search, shared by both search boxes ---- */
 
 function searchPool(){
   return state.year === "all" ? ALL : ALL.filter(e => e.year === state.year);
@@ -1072,7 +1177,7 @@ function matches(query){
     const hay = norm(`${e.name} ${e.pos} ${e.nfl} ${e.team}`);
     if (!terms.every(t => hay.includes(t))) continue;
     const n = norm(e.name);
-    // exact prefix on the player's name outranks a mid-string or team hit
+    // an exact prefix on the player's name outranks a mid-string or team hit
     const score = n.startsWith(q) ? 0 : n.includes(q) ? 1 : 2;
     scored.push([score, e]);
   }
@@ -1084,100 +1189,141 @@ function matches(query){
   return scored.slice(0, 40).map(x => x[1]);
 }
 
-function renderLookup(){
-  const list = $("#results");
-  const emptyBox = $("#lookupEmpty");
-  const detail = $("#lookupDetail");
-  const searchUI = $("#lookupSearch");
+/** One tappable search-result row. */
+function resultRow(e, onPick, extra){
+  const li = el("li");
+  const b = el("button", "result");
+  b.type = "button";
+  b.style.setProperty("--pos", posVar(e.pos));
+  b.style.setProperty("--yc", yearVar(e.year));
 
-  $("#searchScope").textContent = state.year === "all"
-    ? `Search all ${ALL.length} drafted players · ${YEARS.filter(y=>LEAGUE.years[y].picks.length).join(" + ")}`
-    : `Search the ${state.year} draft board`;
+  const grow = el("div", "grow");
+  grow.appendChild(el("div", "name", e.name));
+  grow.appendChild(el("div", "meta", `${e.nfl} · ${e.team}`));
 
-  if (state.selected){
-    searchUI.hidden = true;
-    detail.textContent = "";
-    detail.appendChild(renderDetail(ALL.find(e => e.id === state.selected)));
-    return;
-  }
-  searchUI.hidden = false;
+  const chip = el("span", "pos", e.pos);
+  chip.style.setProperty("--pos", posVar(e.pos));
+
+  const coord = el("div", "coord");
+  coord.innerHTML = `${e.kept ? "kept " : ""}R${e.rd}<small>${e.year} · PICK ${e.pk}</small>`;
+
+  b.append(grow, chip, coord);
+  if (extra) b.appendChild(extra);
+  b.addEventListener("click", onPick);
+  li.appendChild(b);
+  return li;
+}
+
+function wireSearch(inputSel, clearSel, key, onChange){
+  $(inputSel).addEventListener("input", e => {
+    state[key] = e.target.value;
+    onChange();
+    $(clearSel).hidden = !state[key];
+    render();
+  });
+  $(clearSel).addEventListener("click", () => {
+    state[key] = ""; $(inputSel).value = ""; $(clearSel).hidden = true;
+    onChange(); render(); $(inputSel).focus();
+  });
+}
+wireSearch("#qc", "#qcClear", "calcQ", () => { state.calcPick = null; state.manual = false; });
+wireSearch("#qh", "#qhClear", "histQ", () => { state.histName = null; });
+
+/* ============================================================
+   TAB 1 — KEEPER COST
+   ============================================================ */
+
+function renderCalc(){
+  const pick = $("#calcPick");
+  const detail = $("#calcDetail");
   detail.textContent = "";
 
+  if (state.manual){
+    pick.hidden = true;
+    detail.appendChild(renderCostCard(null));
+    return;
+  }
+  if (state.calcPick){
+    pick.hidden = true;
+    detail.appendChild(renderCostCard(ALL.find(e => e.id === state.calcPick)));
+    return;
+  }
+  pick.hidden = false;
+
+  $("#calcScope").textContent = state.year === "all"
+    ? "Who are you thinking of keeping?"
+    : `Keeping someone off the ${state.year} board`;
+
+  const list = $("#calcResults");
+  const emptyBox = $("#calcEmpty");
   list.textContent = "";
   emptyBox.hidden = true;
 
-  if (!state.q.trim()){
-    if (state.year !== "all" && LEAGUE.years[state.year].status === "upcoming"){
-      emptyBox.hidden = false;
-      emptyBox.innerHTML = `<strong>${state.year} hasn't drafted yet</strong>
-        Switch to <b>All</b> or a past year to look up a player's keeper cost for the ${state.year} season.`;
-      return;
-    }
+  if (!state.calcQ.trim()){
     emptyBox.hidden = false;
-    emptyBox.innerHTML = `<strong>Who are you thinking about?</strong>
-      Type a name to see what they'd cost to keep — or a team name to see everyone they drafted.`;
+    if (state.year !== "all" && !LEAGUE.years[state.year].picks.length){
+      emptyBox.innerHTML = `<strong>${state.year} hasn't drafted yet</strong>
+        Nobody was drafted in ${state.year}, so there's no one to keep from it.
+        Switch to <b>All</b> or an earlier year.`;
+    } else {
+      emptyBox.innerHTML = `<strong>Search a player</strong>
+        Pick anyone off a draft board and this works out what they'd cost to keep —
+        and whether it's their last year of eligibility.`;
+    }
     return;
   }
 
-  const hits = matches(state.q);
+  const hits = matches(state.calcQ);
   if (!hits.length){
     emptyBox.hidden = false;
     emptyBox.innerHTML = `<strong>No match</strong>
-      Nobody named “${esc(state.q)}” was drafted${state.year === "all" ? "" : " in " + state.year}.
-      Undrafted players go through the <b>waiver wire</b> rules — open any player and switch the acquisition to Waiver wire.`;
+      Nobody named “${esc(state.calcQ)}” was drafted${state.year === "all" ? "" : " in " + state.year}.
+      If they came off the waiver wire, price them by hand below.`;
     return;
   }
-
   for (const e of hits){
-    const li = el("li");
-    const b = el("button", "result");
-    b.type = "button";
-    b.style.setProperty("--pos", posVar(e.pos));
-
-    const grow = el("div", "grow");
-    grow.appendChild(el("div", "name", e.name));
-    grow.appendChild(el("div", "meta", `${e.nfl} · ${e.team}`));
-
-    const chip = el("span", "pos", e.pos);
-    chip.style.setProperty("--pos", posVar(e.pos));
-
-    const coord = el("div", "coord");
-    coord.innerHTML = `${e.kept ? "kept " : ""}R${e.rd}<small>${e.year} · PICK ${e.pk}</small>`;
-
-    b.append(grow, chip, coord);
-    b.addEventListener("click", () => {
-      state.selected = e.id;
-      state.source = "draft";
-      state.season = null;
-      render();
-      window.scrollTo({ top:0, behavior:"smooth" });
-    });
-    li.appendChild(b);
-    list.appendChild(li);
+    list.appendChild(resultRow(e, () => {
+      state.calcPick = e.id; state.source = "draft"; state.season = null;
+      render(); window.scrollTo({ top:0, behavior:"smooth" });
+    }));
   }
 }
 
-/* ---- the detail / calculator card ---- */
+$("#manualBtn").addEventListener("click", () => {
+  state.manual = true; state.source = "draft"; state.season = null;
+  render(); window.scrollTo({ top:0, behavior:"smooth" });
+});
 
-function renderDetail(e){
+/**
+ * The cost card. `e` is a draft-board entry, or null for a hand-entered player.
+ */
+function renderCostCard(e){
   const card = el("div", "detail");
-  const trace = traceOrigin(e);
-  const origin = trace.origin;
-  const targetYear = Number(e.year) + 1;
-  const autoSeason = targetYear - Number(origin.year);   // 1 = first keeper season
+  const manual = !e;
+
+  const trace  = manual ? null : traceOrigin(e);
+  const origin = manual ? null : trace.origin;
+  const origRound  = manual ? state.manualRound : origin.rd;
+  const targetYear = manual ? null : Number(e.year) + 1;
+  const autoSeason = manual ? 1 : targetYear - Number(origin.year);
   const season = state.season || Math.min(Math.max(autoSeason, 1), 3);
 
   /* header */
   const head = el("div", "detail-head");
   const h = el("div");
-  h.appendChild(el("h2", null, e.name));
+  h.appendChild(el("h2", null, manual ? "Price by hand" : e.name));
   const meta = el("div", "meta");
-  meta.innerHTML = `<span class="pos" style="--pos:${posVar(e.pos)}">${esc(e.pos)}</span>
-    &nbsp;${esc(e.nfl)} · ${esc(e.team)} · ${e.year} R${e.rd}.${String(e.pk).padStart(2,"0")}`;
+  meta.innerHTML = manual
+    ? "For a waiver pickup or anyone not on a loaded board"
+    : `<span class="pos" style="--pos:${posVar(e.pos)}">${esc(e.pos)}</span>
+       &nbsp;${esc(e.nfl)} · ${esc(e.team)} · <span style="color:${yearVar(e.year)}">${e.year}</span>
+       R${e.rd}.${String(e.pk).padStart(2,"0")}`;
   h.appendChild(meta);
   const back = el("button", "back", "← Back");
   back.type = "button";
-  back.addEventListener("click", () => { state.selected = null; state.season = null; render(); });
+  back.addEventListener("click", () => {
+    state.calcPick = null; state.manual = false; state.season = null; render();
+  });
   head.append(h, back);
   card.appendChild(head);
 
@@ -1200,24 +1346,38 @@ function renderDetail(e){
   if (state.source === "waiver"){
     body.append(...waiverBlock());
   } else {
-    body.append(...draftedBlock(e, origin, trace, targetYear, autoSeason, season));
+    body.append(...draftedBlock({ e, manual, origin, trace, origRound, targetYear, autoSeason, season }));
   }
 
   card.appendChild(body);
+
+  if (!manual){
+    const foot = el("div", "hist-foot");
+    const link = el("button", "linkish", `See ${e.name}'s full draft history →`);
+    link.type = "button";
+    link.addEventListener("click", () => {
+      state.histName = norm(e.name); state.histQ = "";
+      $("#qh").value = ""; $("#qhClear").hidden = true;
+      setTab("history"); window.scrollTo({ top:0, behavior:"smooth" });
+    });
+    foot.appendChild(link);
+    card.appendChild(foot);
+  }
   return card;
 }
 
-function draftedBlock(e, origin, trace, targetYear, autoSeason, season){
+function draftedBlock(ctx){
+  const { e, manual, origin, trace, origRound, targetYear, autoSeason, season } = ctx;
   const out = [];
 
-  /* what we worked out from the boards */
-  if (e.kept && !trace.unresolved){
+  /* what the boards already told us */
+  if (!manual && e.kept && !trace.unresolved){
     const note = el("div", "auto-note");
     note.innerHTML = `ESPN flagged this as a <b>kept</b> pick. Tracing it back:
-      originally drafted <b>${origin.year} Round ${origin.rd}</b> by ${origin.team},
+      originally drafted <b>${origin.year} Round ${origin.rd}</b> by ${esc(origin.team)},
       so ${e.year} was roster season <b>${trace.seasonsRostered}</b> of 3.`;
     out.push(note);
-  } else if (e.kept && trace.unresolved){
+  } else if (!manual && e.kept && trace.unresolved){
     const note = el("div", "auto-note");
     note.innerHTML = `ESPN flagged this as a <b>kept</b> pick, but they weren't on the
       ${Number(e.year) - 1} draft board — so they were picked up mid-season off waivers
@@ -1226,12 +1386,20 @@ function draftedBlock(e, origin, trace, targetYear, autoSeason, season){
     out.push(note);
   }
 
-  /* keeper season selector */
+  /* manual mode needs the original round typed in */
+  if (manual){
+    const rf = el("div", "field");
+    rf.appendChild(el("div", "lbl", "What round were they originally drafted in?"));
+    rf.appendChild(stepper(state.manualRound, v => { state.manualRound = v; }, "Original draft round"));
+    out.push(rf);
+  }
+
+  /* keeper season */
   const f = el("div", "field");
-  f.appendChild(el("div", "lbl", `Keeping them for ${targetYear} would be their…`));
+  f.appendChild(el("div", "lbl", manual
+    ? "Keeping them would be their…"
+    : `Keeping them for ${targetYear} would be their…`));
   const seg = el("div", "seg");
-  // 1st and 2nd are the only keepable seasons; a 3rd only appears when the
-  // boards say this player has already used both, so the limit is visible.
   const options = season >= 3 ? [1,2,3] : [1,2];
   const labels = { 1:"1st keeper yr", 2:"2nd keeper yr", 3:"3rd — pool" };
   for (const s of options){
@@ -1242,8 +1410,8 @@ function draftedBlock(e, origin, trace, targetYear, autoSeason, season){
     seg.appendChild(b);
   }
   f.appendChild(seg);
-  if (!state.season && autoSeason >= 1 && autoSeason <= 3){
-    const hint = el("div", "what");
+  if (!manual && !state.season && autoSeason >= 1 && autoSeason <= 3){
+    const hint = el("div");
     hint.style.cssText = "font-family:var(--mono);font-size:10.5px;letter-spacing:.06em;color:var(--faint)";
     hint.textContent = `AUTO-SET FROM THE ${origin.year} BOARD — TAP TO OVERRIDE`;
     f.appendChild(hint);
@@ -1251,15 +1419,16 @@ function draftedBlock(e, origin, trace, targetYear, autoSeason, season){
   out.push(f);
 
   /* the number */
-  const res = draftedCost(origin.rd, season);
+  const res = draftedCost(origRound, season);
   const cost = el("div", "cost" + (res ? "" : " void"));
+  const lead = manual ? "Keeper cost" : `${targetYear} keeper cost`;
   if (res){
-    cost.innerHTML = `<div class="lead">${targetYear} keeper cost</div>
+    cost.innerHTML = `<div class="lead">${lead}</div>
       <div class="big">Round ${res.round}</div>
-      <div class="tail">Costs ${esc(e.team)} their <b>${ord(res.round)}-round pick</b></div>
+      <div class="tail">Costs ${manual ? "their" : esc(e.team) + " their"} <b>${ord(res.round)}-round pick</b></div>
       <div class="math">${res.math}${res.clamped ? " → floors at Round 1" : ""}</div>`;
   } else {
-    cost.innerHTML = `<div class="lead">${targetYear} keeper cost</div>
+    cost.innerHTML = `<div class="lead">${lead}</div>
       <div class="big">Not eligible</div>
       <div class="tail">Three seasons on a roster is the limit — back to the draft pool.</div>`;
   }
@@ -1267,14 +1436,16 @@ function draftedBlock(e, origin, trace, targetYear, autoSeason, season){
 
   /* flags */
   if (res && season === 2){
-    out.push(flag("warn", "Final keeper season.",
-      `${targetYear} would be roster season 3. After ${targetYear} this player must return to the general draft pool.`));
+    out.push(flag("warn", "Final keeper season.", manual
+      ? "This would be roster season 3. After it, the player must return to the general draft pool."
+      : `${targetYear} would be roster season 3. After ${targetYear} this player must return to the general draft pool.`));
   }
   if (!res){
-    out.push(flag("stop", "Term limit reached.",
-      `Acquired for ${origin.year}, so ${origin.year}–${Number(origin.year)+2} were their three seasons.`));
+    out.push(flag("stop", "Term limit reached.", manual
+      ? "Three seasons on a roster is the cap, counting the season they were acquired."
+      : `Acquired for ${origin.year}, so ${origin.year}–${Number(origin.year)+2} were their three seasons.`));
   }
-  if (res && origin.rd <= 2){
+  if (res && origRound <= 2){
     out.push(flag("info", "Round 1–2 rule.",
       "Players originally drafted in the first two rounds always cost a 1st-round pick, no matter how many seasons they've been kept."));
   }
@@ -1284,39 +1455,65 @@ function draftedBlock(e, origin, trace, targetYear, autoSeason, season){
   /* the ladder */
   const lf = el("div", "field");
   lf.appendChild(el("div", "lbl", "Roster clock"));
-  lf.appendChild(ladder(origin, season, targetYear));
+  lf.appendChild(ladder(origRound, season, manual ? null : Number(origin.year), manual ? null : targetYear, manual ? !!origin : false));
   out.push(lf);
 
   return out;
 }
 
-function ladder(origin, season, targetYear){
+/** Reusable 1..FINAL_ROUND number stepper. */
+function stepper(value, commit, label){
+  const step = el("div", "stepper");
+  const minus = el("button", null, "−"); minus.type = "button"; minus.setAttribute("aria-label", `Lower ${label}`);
+  const plus  = el("button", null, "+"); plus.type  = "button"; plus.setAttribute("aria-label", `Raise ${label}`);
+  const input = el("input");
+  input.type = "number"; input.min = "1"; input.max = String(FINAL_ROUND);
+  input.inputMode = "numeric"; input.value = String(value);
+  input.setAttribute("aria-label", label);
+
+  const set = v => { commit(clampRound(Number(v) || 1)); render(); };
+  minus.addEventListener("click", () => set(value - 1));
+  plus.addEventListener("click",  () => set(value + 1));
+  input.addEventListener("change", ev => set(ev.target.value));
+
+  step.append(minus, input, plus);
+  return step;
+}
+
+/**
+ * The three-season clock. With an origin year the rungs are labelled by season;
+ * hand-entered players get generic "Season 1/2/3" labels instead.
+ */
+function ladder(origRound, season, originYear, targetYear, acquiredNotDrafted){
   const wrap = el("div", "ladder");
-  const y0 = Number(origin.year);
-  const steps = [
-    { yr:y0,   n:"1", what:`${origin.kept ? "Acquired" : "Drafted"} — Round ${origin.rd}` },
-    { yr:y0+1, n:"2", what:costLabel(origin.rd, 1) },
-    { yr:y0+2, n:"3", what:costLabel(origin.rd, 2) },
-    { yr:y0+3, n:"×", what:"Returns to the draft pool", end:true }
+  const rows = [
+    { n:"1", what:`${acquiredNotDrafted ? "Acquired" : "Drafted"} — Round ${origRound}` },
+    { n:"2", what:costLabel(origRound, 1) },
+    { n:"3", what:costLabel(origRound, 2) },
+    { n:"×", what:"Returns to the draft pool", end:true }
   ];
-  for (const s of steps){
+  rows.forEach((s, i) => {
+    const yr = originYear === null ? null : originYear + i;
     const rung = el("div", "rung");
-    const isNow = s.yr === targetYear;
+    const isNow = originYear === null ? (i + 1 === season + 1) : yr === targetYear;
     if (isNow) rung.classList.add("on");
     if (s.end) rung.classList.add("end");
-    if (s.yr < targetYear) rung.classList.add("past");
+    if (yr !== null && yr < targetYear) rung.classList.add("past");
 
     const rail = el("div", "rail");
     rail.appendChild(el("div", "node", s.n));
     rail.appendChild(el("div", "stem"));
 
     const txt = el("div", "txt");
-    txt.appendChild(el("div", "yr", String(s.yr) + (s.end ? "" : " season")));
+    const label = yr === null
+      ? (s.end ? "After season 3" : `Season ${i + 1}`)
+      : String(yr) + (s.end ? "" : " season");
+    txt.appendChild(el("div", "yr", label));
     txt.appendChild(el("div", "what", s.what));
 
     rung.append(rail, txt);
     wrap.appendChild(rung);
-  }
+  });
   return wrap;
 }
 
@@ -1330,21 +1527,7 @@ function waiverBlock(){
 
   const f = el("div", "field");
   f.appendChild(el("div", "lbl", "Their ADP round in the upcoming draft"));
-  const step = el("div", "stepper");
-  const minus = el("button", null, "−"); minus.type = "button"; minus.setAttribute("aria-label","Lower the ADP round");
-  const plus  = el("button", null, "+"); plus.type  = "button"; plus.setAttribute("aria-label","Raise the ADP round");
-  const input = el("input");
-  input.type = "number"; input.min = "1"; input.max = String(FINAL_ROUND);
-  input.inputMode = "numeric"; input.value = String(state.adp);
-  input.setAttribute("aria-label", "ADP round");
-
-  const setAdp = v => { state.adp = clampRound(Number(v) || 1); render(); };
-  minus.addEventListener("click", () => setAdp(state.adp - 1));
-  plus.addEventListener("click",  () => setAdp(state.adp + 1));
-  input.addEventListener("change", ev => setAdp(ev.target.value));
-
-  step.append(minus, input, plus);
-  f.appendChild(step);
+  f.appendChild(stepper(state.adp, v => { state.adp = v; }, "ADP round"));
   out.push(f);
 
   const res = objCost(state.adp);
@@ -1372,7 +1555,186 @@ function flag(kind, bold, rest){
   return f;
 }
 
-/* ---- roster tab ---- */
+/* ============================================================
+   TAB 2 — DRAFT HISTORY
+   ============================================================ */
+
+function renderHistory(){
+  const out = $("#histOut");
+  out.textContent = "";
+
+  /* one player's history across every board */
+  if (state.histName){
+    out.appendChild(playerHistory(state.histName));
+    return;
+  }
+
+  const q = state.histQ.trim();
+  $("#histScope").textContent = q
+    ? `Searching ${state.year === "all" ? "every board" : "the " + state.year + " board"}`
+    : (state.year === "all"
+        ? `Every pick, every year · ${YEARS.filter(y => LEAGUE.years[y].picks.length).join(" + ")}`
+        : `The full ${state.year} draft board`);
+
+  if (q){
+    const hits = matches(q);
+    if (!hits.length){
+      const box = el("div", "empty");
+      box.innerHTML = `<strong>No match</strong>
+        Nobody named “${esc(q)}” was drafted${state.year === "all" ? "" : " in " + state.year}.`;
+      out.appendChild(box);
+      return;
+    }
+    const list = el("ul", "results");
+    for (const e of hits){
+      list.appendChild(resultRow(e, () => {
+        state.histName = norm(e.name); render(); window.scrollTo({ top:0, behavior:"smooth" });
+      }));
+    }
+    out.appendChild(list);
+    return;
+  }
+
+  /* no query — show a whole board */
+  if (state.year === "all"){
+    const box = el("div", "empty");
+    box.innerHTML = `<strong>Pick a year to browse</strong>
+      Choose ${YEARS.filter(y => LEAGUE.years[y].picks.length).join(" or ")} above to read the
+      full board round by round — or search for a player to see every year they were drafted.`;
+    out.appendChild(box);
+    return;
+  }
+  out.appendChild(fullBoard(state.year));
+}
+
+/** The complete board for one year, broken up by round. */
+function fullBoard(year){
+  const picks = LEAGUE.years[year].picks;
+  if (!picks.length){
+    const box = el("div", "empty");
+    box.innerHTML = `<strong>The ${year} draft hasn't happened</strong>
+      Once the board is up it'll appear here, round by round.
+      Keeper costs for ${year} already work — check the <b>Keeper Cost</b> tab.`;
+    return box;
+  }
+
+  const head = el("div", "roster-head");
+  head.appendChild(el("h2", null, `${year} Draft`));
+  head.appendChild(el("div", "count", `${picks.length} PICKS · ${LEAGUE.rounds} ROUNDS`));
+
+  const wrap = el("div", "tablewrap");
+  wrap.style.setProperty("--yc", yearVar(year));
+  const table = el("table");
+  table.innerHTML = `<thead><tr>
+      <th class="c-pk">Pick</th><th>Player &amp; franchise</th><th class="c-po">Pos</th>
+    </tr></thead>`;
+  const tb = el("tbody");
+
+  let round = 0;
+  for (const p of [...picks].sort((a,b) => a[0]-b[0] || a[1]-b[1])){
+    const [rd, pk, name, pos, nfl, team, kept] = p;
+    if (rd !== round){
+      round = rd;
+      const sep = el("tr", "rsep");
+      const td = el("td", null, `Round ${rd}`);
+      td.colSpan = 3;
+      sep.appendChild(td);
+      tb.appendChild(sep);
+    }
+    const tr = el("tr");
+    if (kept) tr.classList.add("kept");
+
+    const c1 = el("td", "c-pk", `${rd}.${String(pk).padStart(2,"0")}`);
+    const c2 = el("td", "c-pl");
+    c2.innerHTML = `<div class="n">${esc(name)}${kept ? '<span class="kchip">KEPT</span>' : ""}</div>
+                    <div class="t">${esc(nfl)}</div>
+                    <div class="c-ft">${esc(team)}</div>`;
+    const c3 = el("td", "c-po");
+    const chip = el("span", "pos", pos);
+    chip.style.setProperty("--pos", posVar(pos));
+    c3.appendChild(chip);
+
+    tr.append(c1, c2, c3);
+    tb.appendChild(tr);
+  }
+  table.appendChild(tb);
+  wrap.appendChild(table);
+
+  const box = el("div");
+  box.append(head, wrap);
+  return box;
+}
+
+/** Every board a player appears on, oldest first. */
+function playerHistory(key){
+  const byYear = BY_NAME.get(key) || {};
+  const any = YEARS.map(y => byYear[y]).find(Boolean);
+
+  const card = el("div", "detail");
+  const head = el("div", "detail-head");
+  const h = el("div");
+  h.appendChild(el("h2", null, any ? any.name : "Unknown player"));
+  if (any){
+    const meta = el("div", "meta");
+    meta.innerHTML = `<span class="pos" style="--pos:${posVar(any.pos)}">${esc(any.pos)}</span>
+      &nbsp;${esc(any.nfl)} · drafted in ${YEARS.filter(y => byYear[y]).length} of
+      ${YEARS.filter(y => LEAGUE.years[y].picks.length).length} loaded years`;
+    h.appendChild(meta);
+  }
+  const back = el("button", "back", "← Back");
+  back.type = "button";
+  back.addEventListener("click", () => { state.histName = null; render(); });
+  head.append(h, back);
+  card.appendChild(head);
+
+  const hist = el("div", "hist");
+  hist.style.border = "0";
+  hist.style.margin = "0";
+  hist.style.borderRadius = "0";
+
+  for (const y of YEARS){
+    const e = byYear[y];
+    const row = el("div", "hist-row" + (e ? "" : " absent"));
+    row.style.setProperty("--yc", yearVar(y));
+
+    const yr = el("div", "hist-yr", y);
+    const main = el("div", "hist-main");
+    const slot = el("div", "hist-slot");
+
+    if (e){
+      main.innerHTML = `<div class="t">${esc(e.team)}</div>
+        <div class="s">${e.kept ? "Kept, not drafted" : "Drafted"} · ${esc(e.nfl)}</div>`;
+      slot.innerHTML = `R${e.rd}<span style="color:var(--faint)">.${String(e.pk).padStart(2,"0")}</span>`;
+    } else if (!LEAGUE.years[y].picks.length){
+      main.innerHTML = `<div class="t">Draft hasn't happened yet</div>`;
+    } else {
+      main.innerHTML = `<div class="t">Not drafted</div>
+        <div class="s">Undrafted, or picked up off waivers</div>`;
+    }
+    row.append(yr, main, slot);
+    hist.appendChild(row);
+  }
+  card.appendChild(hist);
+
+  if (any){
+    const foot = el("div", "hist-foot");
+    const link = el("button", "linkish", "Price them as a keeper →");
+    link.type = "button";
+    link.addEventListener("click", () => {
+      const latest = [...YEARS].reverse().map(y => byYear[y]).find(Boolean);
+      state.calcPick = latest.id; state.manual = false;
+      state.source = "draft"; state.season = null;
+      setTab("calc"); window.scrollTo({ top:0, behavior:"smooth" });
+    });
+    foot.appendChild(link);
+    card.appendChild(foot);
+  }
+  return card;
+}
+
+/* ============================================================
+   TAB 3 — ROSTERS
+   ============================================================ */
 
 function teamsIn(year){
   return [...new Set(LEAGUE.years[year].picks.map(p => p[5]))].sort((a,b) =>
@@ -1381,7 +1743,7 @@ function teamsIn(year){
 }
 
 function renderRoster(){
-  const year = state.rosterYear;
+  const year = activeYear();
   const sel = $("#teamSel");
   const out = $("#rosterOut");
   out.textContent = "";
@@ -1396,7 +1758,7 @@ function renderRoster(){
     const box = el("div", "empty");
     box.innerHTML = `<strong>The ${year} draft hasn't happened</strong>
       Once the board is up, drop it into the data file and every ${year} roster appears here.
-      Keeper costs for the ${year} season already work — check the Player Lookup tab.`;
+      Keeper costs for the ${year} season already work — check the <b>Keeper Cost</b> tab.`;
     out.appendChild(box);
     return;
   }
@@ -1414,8 +1776,10 @@ function renderRoster(){
   const head = el("div", "roster-head");
   head.appendChild(el("h2", null, state.team));
   const keptCount = picks.filter(p => p[6]).length;
-  head.appendChild(el("div", "count",
-    `${year} · ${picks.length} PICKS${keptCount ? ` · ${keptCount} KEPT` : ""}`));
+  const count = el("div", "count",
+    `${year} · ${picks.length} PICKS${keptCount ? ` · ${keptCount} KEPT` : ""}`);
+  count.style.color = yearVar(year);
+  head.appendChild(count);
   out.appendChild(head);
 
   const wrap = el("div", "tablewrap");
@@ -1454,7 +1818,9 @@ $("#teamSel").addEventListener("change", e => { state.team = e.target.value; ren
 
 function render(){
   renderYearSeg();
-  if (state.tab === "lookup") renderLookup(); else renderRoster();
+  if (state.tab === "calc")         renderCalc();
+  else if (state.tab === "history") renderHistory();
+  else                              renderRoster();
 }
 
 render();

@@ -1,0 +1,49 @@
+name: Deploy Keeper Ledger to Pages
+
+# The Pages REST endpoint isn't reachable from every environment, so this
+# workflow turns Pages on itself (configure-pages `enablement`) and publishes
+# the site in the same run.
+on:
+  push:
+    branches: [claude/fantasy-keeper-league-app-cy241r, main]
+    paths: ["index.html", ".github/workflows/pages.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Never cancel a run that is already publishing; just queue behind it.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      # index.html is the whole app, so the site is just that one file plus a
+      # 404 fallback. Everything else in the repo stays out of the upload.
+      - name: Assemble the site
+        run: |
+          mkdir -p _site
+          cp index.html _site/index.html
+          cp index.html _site/404.html
+          echo "Published $(date -u +%FT%TZ)" > _site/.build
+
+      - uses: actions/configure-pages@v5
+        with:
+          enablement: true
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+      - id: deployment
+        uses: actions/deploy-pages@v4

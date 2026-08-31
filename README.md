@@ -1,4 +1,4 @@
-# Keeper Ledger
+# No Fun Allowed
 
 A keeper-cost lookup and draft-board browser for a 12-team, 15-round ESPN keeper
 league. Built for phones — one shared link, no login, no app install.

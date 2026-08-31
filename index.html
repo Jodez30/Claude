@@ -1,0 +1,1474 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0D131E">
+<meta name="description" content="Keeper costs and draft boards for a 12-team ESPN keeper league.">
+<!--ARTIFACT:START-->
+<title>Keeper Ledger</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+/* ============================================================
+   Keeper Ledger — single dark surface, mobile-first.
+   Every color is declared explicitly so the page holds on any host ground.
+   ============================================================ */
+:root{
+  color-scheme: dark;
+
+  --ground:      #0D131E;
+  --card:        #151D2B;
+  --raised:      #1C2637;
+  --line:        #29354A;
+  --line-soft:   #1F2A3B;
+
+  --text:        #E9EEF7;
+  --muted:       #8A99B2;   /* blue-biased neutral, not a default grey */
+  --faint:       #5E6D85;
+
+  --chalk:       #F5C563;   /* the price. the one loud thing on the page */
+  --chalk-dim:   #7A6231;
+  --keep:        #56D6A8;
+  --warn:        #F59B57;
+  --stop:        #EF6B84;
+
+  --qb:          #F2789A;
+  --rb:          #56D6A8;
+  --wr:          #6BADF5;
+  --te:          #C79BF0;
+  --etc:         #8A99B2;
+
+  --display: "Barlow Condensed", "Oswald", "Arial Narrow", sans-serif;
+  --body:    "Barlow", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --mono:    "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+
+  --pad: 16px;
+  --r: 10px;
+}
+
+*,*::before,*::after{ box-sizing:border-box; }
+
+html{ -webkit-text-size-adjust:100%; }
+
+body{
+  margin:0;
+  background:var(--ground);
+  color:var(--text);
+  font-family:var(--body);
+  font-size:15px;
+  line-height:1.45;
+  -webkit-font-smoothing:antialiased;
+  padding-bottom:calc(48px + env(safe-area-inset-bottom));
+}
+
+.wrap{ max-width:560px; margin:0 auto; }
+
+/* ---------- header ---------- */
+
+.topbar{
+  position:sticky; top:0; z-index:30;
+  background:rgba(13,19,30,.94);
+  backdrop-filter:blur(12px);
+  -webkit-backdrop-filter:blur(12px);
+  border-bottom:1px solid var(--line-soft);
+  padding-top:env(safe-area-inset-top);
+}
+.topbar-inner{
+  max-width:560px; margin:0 auto;
+  padding:10px var(--pad) 0;
+  display:flex; flex-direction:column; gap:8px;
+}
+.brand{ display:flex; align-items:baseline; justify-content:space-between; gap:10px; }
+.wordmark{
+  font-family:var(--display);
+  font-weight:700; font-size:24px; line-height:1;
+  letter-spacing:.05em; text-transform:uppercase;
+  margin:0; white-space:nowrap;
+}
+.wordmark .k{ color:var(--chalk); }
+.sub{
+  font-family:var(--mono); font-size:9.5px; font-weight:500;
+  letter-spacing:.11em; text-transform:uppercase; color:var(--faint);
+  white-space:nowrap;
+}
+
+/* ---------- segmented controls ---------- */
+
+.seg{
+  display:flex; gap:4px;
+  background:var(--card);
+  border:1px solid var(--line-soft);
+  border-radius:var(--r);
+  padding:4px;
+}
+.seg button{
+  flex:1 1 0; min-width:0;
+  appearance:none; border:0; cursor:pointer;
+  background:transparent; color:var(--muted);
+  font-family:var(--display); font-weight:600; font-size:15px;
+  letter-spacing:.05em; text-transform:uppercase;
+  padding:8px 4px; border-radius:7px;
+  transition:background .14s ease, color .14s ease;
+}
+.seg button.on{ background:var(--raised); color:var(--text); }
+.seg.years button.on{ color:var(--chalk); }
+.seg button:focus-visible{ outline:2px solid var(--chalk); outline-offset:1px; }
+
+.tabs{ display:flex; gap:0; margin:0 calc(var(--pad) * -1); padding:0 var(--pad); }
+.tabs button{
+  appearance:none; background:none; border:0; cursor:pointer;
+  font-family:var(--display); font-weight:600; font-size:16px;
+  letter-spacing:.06em; text-transform:uppercase;
+  color:var(--faint); padding:10px 0 11px; margin-right:22px;
+  border-bottom:2px solid transparent;
+  transition:color .14s ease, border-color .14s ease;
+}
+.tabs button[aria-selected="true"]{ color:var(--text); border-bottom-color:var(--chalk); }
+.tabs button:focus-visible{ outline:2px solid var(--chalk); outline-offset:2px; }
+
+/* ---------- layout ---------- */
+
+main{ padding:18px var(--pad) 0; }
+.panel[hidden]{ display:none !important; }
+
+.eyebrow{
+  font-family:var(--mono); font-size:10px; font-weight:500;
+  letter-spacing:.15em; text-transform:uppercase; color:var(--faint);
+  margin:0 0 8px;
+}
+
+/* ---------- search ---------- */
+
+.searchbox{ position:relative; }
+.searchbox input{
+  width:100%;
+  font-family:var(--body); font-size:16px; /* 16px keeps iOS from zooming */
+  color:var(--text); background:var(--card);
+  border:1px solid var(--line); border-radius:var(--r);
+  padding:13px 40px 13px 14px;
+}
+.searchbox input::placeholder{ color:var(--faint); }
+.searchbox input:focus{ outline:none; border-color:var(--chalk); }
+.clear{
+  position:absolute; right:6px; top:50%; transform:translateY(-50%);
+  appearance:none; border:0; background:none; cursor:pointer;
+  color:var(--faint); font-size:20px; line-height:1;
+  width:32px; height:32px; border-radius:8px;
+}
+.clear:hover{ color:var(--text); }
+
+/* ---------- result list ---------- */
+
+.results{ list-style:none; margin:12px 0 0; padding:0; display:flex; flex-direction:column; gap:6px; }
+.result{
+  display:flex; align-items:center; gap:10px; width:100%;
+  appearance:none; cursor:pointer; text-align:left;
+  background:var(--card); border:1px solid var(--line-soft);
+  border-left:3px solid var(--pos, var(--etc));
+  border-radius:var(--r); padding:10px 12px;
+  color:var(--text); font-family:var(--body); font-size:15px;
+}
+.result:hover{ background:var(--raised); }
+.result:focus-visible{ outline:2px solid var(--chalk); outline-offset:1px; }
+.result .name{ font-weight:600; line-height:1.2; }
+.result .meta{ font-size:12px; color:var(--muted); margin-top:2px; }
+.result .grow{ flex:1 1 auto; min-width:0; }
+.result .name,.result .meta{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.result .coord{
+  font-family:var(--mono); font-size:13px; font-weight:500;
+  color:var(--text); text-align:right; white-space:nowrap;
+}
+.result .coord small{ display:block; font-size:10px; color:var(--faint); letter-spacing:.08em; }
+
+.pos{
+  font-family:var(--mono); font-size:10px; font-weight:600;
+  letter-spacing:.06em; padding:3px 5px; border-radius:4px;
+  background:color-mix(in srgb, var(--pos) 16%, transparent);
+  color:var(--pos); white-space:nowrap;
+}
+
+.empty{
+  border:1px dashed var(--line); border-radius:var(--r);
+  padding:22px 16px; text-align:center; color:var(--muted); font-size:14px;
+  margin-top:12px;
+}
+.empty strong{ display:block; color:var(--text); font-family:var(--display);
+  font-size:17px; letter-spacing:.04em; text-transform:uppercase; margin-bottom:4px; }
+
+/* ---------- detail card ---------- */
+
+.detail{
+  background:var(--card); border:1px solid var(--line);
+  border-radius:14px; overflow:hidden; margin-top:12px;
+}
+.detail-head{
+  padding:14px 16px; border-bottom:1px solid var(--line-soft);
+  display:flex; align-items:flex-start; gap:10px;
+}
+.detail-head h2{
+  font-family:var(--display); font-weight:700; font-size:24px;
+  letter-spacing:.02em; line-height:1.08; margin:0 0 3px;
+}
+.detail-head .meta{ font-size:12.5px; color:var(--muted); }
+.back{
+  appearance:none; border:1px solid var(--line); background:var(--raised);
+  color:var(--muted); border-radius:8px; cursor:pointer;
+  font-family:var(--mono); font-size:11px; letter-spacing:.06em;
+  padding:5px 9px; margin-left:auto; flex:none;
+}
+.back:hover{ color:var(--text); }
+
+.detail-body{ padding:14px 16px 16px; display:flex; flex-direction:column; gap:14px; }
+
+.field{ display:flex; flex-direction:column; gap:7px; }
+.field > label,.field > .lbl{
+  font-family:var(--mono); font-size:10px; font-weight:500;
+  letter-spacing:.14em; text-transform:uppercase; color:var(--faint);
+}
+
+.auto-note{
+  font-size:12.5px; color:var(--muted);
+  background:var(--raised); border-left:2px solid var(--chalk-dim);
+  border-radius:0 6px 6px 0; padding:8px 10px;
+}
+.auto-note b{ color:var(--text); font-weight:600; }
+
+/* ADP stepper */
+.stepper{ display:flex; align-items:stretch; gap:8px; }
+.stepper button{
+  appearance:none; cursor:pointer; width:46px; flex:none;
+  background:var(--raised); border:1px solid var(--line); border-radius:8px;
+  color:var(--text); font-size:20px; line-height:1; font-family:var(--body);
+}
+.stepper button:hover{ border-color:var(--chalk); }
+.stepper input{
+  flex:1 1 auto; min-width:0; text-align:center;
+  font-family:var(--mono); font-size:16px; font-weight:600; color:var(--text);
+  background:var(--card); border:1px solid var(--line); border-radius:8px;
+  padding:10px 8px;
+}
+.stepper input:focus{ outline:none; border-color:var(--chalk); }
+
+/* ---------- the cost readout ---------- */
+
+.cost{
+  border-radius:12px; padding:16px;
+  background:
+    linear-gradient(180deg, rgba(245,197,99,.10), rgba(245,197,99,0) 70%),
+    var(--raised);
+  border:1px solid var(--chalk-dim);
+  text-align:center;
+}
+.cost.void{ background:var(--raised); border-color:var(--stop); }
+.cost .lead{
+  font-family:var(--mono); font-size:10px; letter-spacing:.15em;
+  text-transform:uppercase; color:var(--faint); margin-bottom:6px;
+}
+.cost .big{
+  font-family:var(--display); font-weight:700; font-size:52px; line-height:.94;
+  letter-spacing:.01em; color:var(--chalk); font-variant-numeric:tabular-nums;
+}
+.cost.void .big{ font-size:30px; color:var(--stop); }
+.cost .tail{ font-size:13.5px; color:var(--muted); margin-top:7px; }
+.cost .math{
+  font-family:var(--mono); font-size:12px; color:var(--faint);
+  margin-top:8px; padding-top:9px; border-top:1px solid var(--line);
+}
+
+.flag{
+  display:flex; gap:9px; align-items:flex-start;
+  border-radius:9px; padding:10px 12px; font-size:13px; line-height:1.4;
+}
+.flag .dot{ width:7px; height:7px; border-radius:50%; margin-top:6px; flex:none; }
+.flag b{ font-weight:600; }
+.flag.warn{ background:rgba(245,155,87,.11); color:#F6C39B; }
+.flag.warn .dot{ background:var(--warn); }
+.flag.warn b{ color:var(--warn); }
+.flag.stop{ background:rgba(239,107,132,.11); color:#F5A9B7; }
+.flag.stop .dot{ background:var(--stop); }
+.flag.stop b{ color:var(--stop); }
+.flag.info{ background:var(--raised); color:var(--muted); }
+.flag.info .dot{ background:var(--faint); }
+.flag.info b{ color:var(--text); }
+
+/* ---------- keeper ladder ---------- */
+/* Steps are numbered because roster seasons genuinely are a sequence —
+   the count is the rule (3 and out), so the numbering carries information. */
+
+.ladder{ display:flex; flex-direction:column; gap:0; }
+.rung{ display:flex; gap:11px; align-items:stretch; }
+.rung .rail{ width:22px; flex:none; display:flex; flex-direction:column; align-items:center; }
+.rung .node{
+  width:22px; height:22px; border-radius:50%; flex:none;
+  border:1.5px solid var(--line); background:var(--card);
+  display:grid; place-items:center;
+  font-family:var(--mono); font-size:10px; font-weight:600; color:var(--faint);
+}
+.rung .stem{ width:1.5px; flex:1 1 auto; background:var(--line); min-height:10px; }
+.rung:last-child .stem{ background:transparent; }
+.rung .txt{ padding:1px 0 13px; flex:1 1 auto; min-width:0; }
+.rung .yr{
+  font-family:var(--display); font-weight:600; font-size:15px;
+  letter-spacing:.05em; color:var(--muted); line-height:1.25;
+}
+.rung .what{ font-size:12.5px; color:var(--faint); }
+.rung.on .node{ border-color:var(--chalk); background:var(--chalk); color:#1B1405; }
+.rung.on .yr{ color:var(--text); }
+.rung.on .what{ color:var(--chalk); }
+.rung.end .node{ border-color:var(--stop); color:var(--stop); border-style:dashed; }
+.rung.end .yr{ color:var(--stop); }
+.rung.past .node{ opacity:.6; }
+
+/* ---------- roster ---------- */
+
+.selectwrap{ position:relative; }
+.selectwrap::after{
+  content:""; position:absolute; right:15px; top:50%; margin-top:-3px;
+  width:8px; height:8px; border-right:1.5px solid var(--muted);
+  border-bottom:1.5px solid var(--muted); transform:rotate(45deg) translateY(-2px);
+  pointer-events:none;
+}
+select{
+  appearance:none; width:100%;
+  font-family:var(--body); font-size:16px; font-weight:500; color:var(--text);
+  background:var(--card); border:1px solid var(--line); border-radius:var(--r);
+  padding:13px 38px 13px 14px;
+}
+select:focus{ outline:none; border-color:var(--chalk); }
+
+.roster-head{
+  display:flex; align-items:baseline; justify-content:space-between;
+  gap:10px; margin:18px 0 9px;
+}
+.roster-head h2{
+  font-family:var(--display); font-weight:700; font-size:22px;
+  letter-spacing:.03em; margin:0; line-height:1.1;
+}
+.roster-head .count{
+  font-family:var(--mono); font-size:11px; color:var(--faint);
+  letter-spacing:.06em; white-space:nowrap;
+}
+
+.tablewrap{
+  overflow-x:auto; -webkit-overflow-scrolling:touch;
+  border:1px solid var(--line-soft); border-radius:var(--r);
+  background:var(--card);
+}
+table{ width:100%; border-collapse:collapse; font-size:14px; }
+thead th{
+  font-family:var(--mono); font-size:9.5px; font-weight:500;
+  letter-spacing:.13em; text-transform:uppercase; color:var(--faint);
+  text-align:left; padding:9px 8px; border-bottom:1px solid var(--line);
+  background:var(--raised); white-space:nowrap;
+}
+tbody td{ padding:9px 8px; border-bottom:1px solid var(--line-soft); vertical-align:middle; }
+tbody tr:last-child td{ border-bottom:0; }
+tbody tr.kept{ background:rgba(86,214,168,.05); }
+.c-rd,.c-pk{
+  font-family:var(--mono); font-size:13px; color:var(--muted);
+  font-variant-numeric:tabular-nums; width:1%; white-space:nowrap;
+}
+.c-rd{ color:var(--text); padding-left:11px; }
+.c-pl{ line-height:1.25; }
+.c-pl .n{ font-weight:600; }
+.c-pl .t{ font-size:11.5px; color:var(--faint); font-family:var(--mono); }
+.c-po{ width:1%; text-align:right; padding-right:11px; white-space:nowrap; }
+.kchip{
+  display:inline-block; margin-left:6px; vertical-align:1px;
+  font-family:var(--mono); font-size:9px; font-weight:600; letter-spacing:.08em;
+  color:var(--keep); background:rgba(86,214,168,.14);
+  border-radius:3px; padding:2px 4px;
+}
+
+/* ---------- rules ---------- */
+
+details.rules{
+  margin:26px 0 8px; background:var(--card);
+  border:1px solid var(--line-soft); border-radius:var(--r);
+}
+details.rules summary{
+  cursor:pointer; list-style:none; padding:13px 15px;
+  font-family:var(--display); font-weight:600; font-size:16px;
+  letter-spacing:.06em; text-transform:uppercase; color:var(--muted);
+  display:flex; align-items:center; justify-content:space-between;
+}
+details.rules summary::-webkit-details-marker{ display:none; }
+details.rules summary::after{ content:"+"; font-family:var(--mono); color:var(--faint); font-size:16px; }
+details.rules[open] summary::after{ content:"–"; }
+details.rules[open] summary{ color:var(--text); border-bottom:1px solid var(--line-soft); }
+.rules-body{ padding:4px 15px 15px; font-size:13.5px; color:var(--muted); }
+.rules-body h3{
+  font-family:var(--mono); font-size:10px; font-weight:500;
+  letter-spacing:.14em; text-transform:uppercase; color:var(--chalk);
+  margin:15px 0 5px;
+}
+.rules-body p{ margin:0 0 7px; }
+.rules-body code{
+  font-family:var(--mono); font-size:12px; color:var(--text);
+  background:var(--raised); border-radius:4px; padding:1px 4px;
+}
+
+footer{
+  padding:22px var(--pad) 0; text-align:center;
+  font-family:var(--mono); font-size:10.5px; letter-spacing:.07em;
+  color:var(--faint); line-height:1.7;
+}
+
+@media (prefers-reduced-motion: reduce){
+  *{ transition:none !important; animation:none !important; }
+}
+@media (min-width:600px){
+  .wordmark{ font-size:30px; }
+  body{ font-size:15.5px; }
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-inner">
+    <div class="brand">
+      <h1 class="wordmark"><span class="k">Keeper</span> Ledger</h1>
+      <span class="sub">12 Teams · 15 Rds</span>
+    </div>
+    <div class="seg years" role="group" aria-label="Draft year" id="yearSeg"></div>
+    <nav class="tabs" role="tablist" aria-label="Sections">
+      <button role="tab" id="tab-lookup" aria-selected="true" aria-controls="panel-lookup">Player Lookup</button>
+      <button role="tab" id="tab-roster" aria-selected="false" aria-controls="panel-roster">Team Rosters</button>
+    </nav>
+  </div>
+</div>
+
+<main class="wrap">
+
+  <!-- ===================== PLAYER LOOKUP ===================== -->
+  <section class="panel" id="panel-lookup" role="tabpanel" aria-labelledby="tab-lookup">
+
+    <div id="lookupSearch">
+      <p class="eyebrow" id="searchScope">Search every drafted player</p>
+      <div class="searchbox">
+        <input id="q" type="search" inputmode="search" autocomplete="off"
+               autocorrect="off" autocapitalize="words" spellcheck="false"
+               placeholder="Start typing a player, team, or position…"
+               aria-label="Search drafted players">
+        <button class="clear" id="qClear" type="button" aria-label="Clear search" hidden>&times;</button>
+      </div>
+      <ul class="results" id="results"></ul>
+      <div class="empty" id="lookupEmpty" hidden></div>
+    </div>
+
+    <div id="lookupDetail"></div>
+  </section>
+
+  <!-- ===================== TEAM ROSTERS ===================== -->
+  <section class="panel" id="panel-roster" role="tabpanel" aria-labelledby="tab-roster" hidden>
+    <p class="eyebrow">Franchise</p>
+    <div class="selectwrap">
+      <select id="teamSel" aria-label="Select a team"></select>
+    </div>
+    <div id="rosterOut"></div>
+  </section>
+
+  <details class="rules">
+    <summary>League Keeper Rules</summary>
+    <div class="rules-body">
+      <h3>Number of keepers</h3>
+      <p>Each team may keep up to <b>2 players</b> from their previous season's roster.</p>
+
+      <h3>Three-season term limit</h3>
+      <p>A player can be on a roster for a maximum of <b>3 total seasons</b>, counting the season they were acquired (draft, trade, or free agency). After the third season the player returns to the general draft pool.</p>
+      <p>Acquired for 2025 → eligible 2025, 2026, 2027 → released for 2028.</p>
+
+      <h3>Keeper cost</h3>
+      <p>Players drafted in the <b>1st or 2nd round always cost a 1st-round pick</b>, every season.</p>
+      <p>Everyone else — 1st keeper season costs <code>round − 1</code>. 2nd keeper season costs <code>previous cost − 2</code>.</p>
+      <p>Drafted R5 → kept for a 4th → kept for a 2nd → back to the pool.</p>
+
+      <h3>Waiver wire — the "OBJ Rule"</h3>
+      <p>A player picked up off waivers costs <b>one round higher than their ADP</b> in the upcoming draft. Per the rulebook's example, a <b>2nd-round ADP costs a 3rd-round pick</b>.</p>
+      <p>An ADP of <b>Round 10 or later</b> costs only a final-round pick.</p>
+
+      <h3>Waiver eligibility</h3>
+      <p>The player must have been on your roster for at least <b>3 consecutive active play weeks</b>. They do not need to have started.</p>
+
+      <h3>Injury exception</h3>
+      <p>If a player was rostered the entire season but accrued points in <b>3 games or fewer due to injury</b>, that season does not count toward the three-season limit. <b>Keep in the IR slot.</b></p>
+    </div>
+  </details>
+
+  <footer>
+    Transcribed from the ESPN draft boards<br>
+    The commissioner has the final say
+  </footer>
+</main>
+
+<script>
+"use strict";
+
+/* ============================================================
+   1. LEAGUE DATA
+   Pick tuple: [round, pick, player, position, nflTeam, fantasyTeam, keptFlag]
+   keptFlag = 1 when ESPN flagged the pick with a "K" (kept, not drafted).
+   To add the 2026 board: fill years["2026"].picks with the same tuples
+   and flip status to "complete". Nothing else needs to change.
+   ============================================================ */
+
+const LEAGUE = {
+  rounds: 15,
+  teamCount: 12,
+  years: {
+
+    "2024": { status:"complete", picks:[
+      [1,1,"Patrick Mahomes","QB","KC","Georgia's Uber Driver",0],
+      [1,2,"Christian McCaffrey","RB","SF","THE FADEDBOYZ",0],
+      [1,3,"Tyreek Hill","WR","Mia","Legion of Coom",0],
+      [1,4,"Jalen Hurts","QB","Phi","Stable Master",0],
+      [1,5,"Bijan Robinson","RB","Atl","5IVE TIME",0],
+      [1,6,"Breece Hall","RB","NYJ","Da Bears",0],
+      [1,7,"CeeDee Lamb","WR","Dal","Cucamonga Cracka Killaz",0],
+      [1,8,"Ja'Marr Chase","WR","Cin","Nabers think I'm selling dope",0],
+      [1,9,"Josh Allen","QB","Buf","KIRK IS A TERRORIST",0],
+      [1,10,"Justin Jefferson","WR","Min","JJ's Torn Meniscus",0],
+      [1,11,"Amon-Ra St. Brown","WR","Det","Green Ti",0],
+      [1,12,"Lamar Jackson","QB","Bal","ACE",0],
+
+      [2,1,"Saquon Barkley","RB","Phi","ACE",0],
+      [2,2,"C.J. Stroud","QB","Hou","Green Ti",0],
+      [2,3,"A.J. Brown","WR","Phi","JJ's Torn Meniscus",0],
+      [2,4,"Garrett Wilson","WR","NYJ","KIRK IS A TERRORIST",0],
+      [2,5,"Chris Olave","WR","NO","Nabers think I'm selling dope",0],
+      [2,6,"Joe Burrow","QB","Cin","Cucamonga Cracka Killaz",0],
+      [2,7,"Kyren Williams","RB","LAR","Da Bears",0],
+      [2,8,"Jonathan Taylor","RB","Ind","5IVE TIME",0],
+      [2,9,"Puka Nacua","WR","LAR","Stable Master",0],
+      [2,10,"Derrick Henry","RB","Bal","Legion of Coom",0],
+      [2,11,"Anthony Richardson","QB","Ind","THE FADEDBOYZ",0],
+      [2,12,"Travis Etienne Jr.","RB","Jax","Georgia's Uber Driver",0],
+
+      [3,1,"Mike Evans","WR","TB","Georgia's Uber Driver",0],
+      [3,2,"Isiah Pacheco","RB","KC","THE FADEDBOYZ",0],
+      [3,3,"Marvin Harrison Jr.","WR","Ari","Legion of Coom",0],
+      [3,4,"Jordan Love","QB","GB","Stable Master",0],
+      [3,5,"Dak Prescott","QB","Dal","5IVE TIME",0],
+      [3,6,"Kyler Murray","QB","Ari","Da Bears",0],
+      [3,7,"Jahmyr Gibbs","RB","Det","Cucamonga Cracka Killaz",0],
+      [3,8,"Malik Nabers","WR","NYG","Nabers think I'm selling dope",0],
+      [3,9,"Drake London","WR","Atl","KIRK IS A TERRORIST",0],
+      [3,10,"Sam LaPorta","TE","Det","JJ's Torn Meniscus",0],
+      [3,11,"Michael Pittman Jr.","WR","Ind","Green Ti",0],
+      [3,12,"Travis Kelce","TE","KC","ACE",0],
+
+      [4,1,"Rachaad White","RB","TB","ACE",0],
+      [4,2,"Nico Collins","WR","Hou","Green Ti",0],
+      [4,3,"Alvin Kamara","RB","NO","JJ's Torn Meniscus",0],
+      [4,4,"De'Von Achane","RB","Mia","KIRK IS A TERRORIST",0],
+      [4,5,"Kenneth Walker III","RB","Sea","Nabers think I'm selling dope",0],
+      [4,6,"Davante Adams","WR","LAR","Cucamonga Cracka Killaz",0],
+      [4,7,"Caleb Williams","QB","Chi","Da Bears",0],
+      [4,8,"DK Metcalf","WR","Pit","5IVE TIME",0],
+      [4,9,"James Cook","RB","Buf","Stable Master",0],
+      [4,10,"Josh Jacobs","RB","GB","Legion of Coom",0],
+      [4,11,"Stefon Diggs","WR","Hou","THE FADEDBOYZ",0],
+      [4,12,"Jared Goff","QB","Det","Georgia's Uber Driver",0],
+
+      [5,1,"DJ Moore","WR","Chi","Georgia's Uber Driver",0],
+      [5,2,"DeVonta Smith","WR","Phi","THE FADEDBOYZ",0],
+      [5,3,"Justin Herbert","QB","LAC","Legion of Coom",0],
+      [5,4,"Brandon Aiyuk","WR","SF","Stable Master",0],
+      [5,5,"Deebo Samuel Sr.","WR","Wsh","5IVE TIME",0],
+      [5,6,"Zay Flowers","WR","Bal","Da Bears",0],
+      [5,7,"Jaylen Waddle","WR","Mia","Cucamonga Cracka Killaz",0],
+      [5,8,"Trey McBride","TE","Ari","Nabers think I'm selling dope",0],
+      [5,9,"Joe Mixon","RB","Hou","KIRK IS A TERRORIST",0],
+      [5,10,"D'Andre Swift","RB","Chi","JJ's Torn Meniscus",0],
+      [5,11,"James Conner","RB","Ari","Green Ti",0],
+      [5,12,"Brock Purdy","QB","SF","ACE",0],
+
+      [6,1,"Aaron Rodgers","QB","FA","ACE",0],
+      [6,2,"Zamir White","RB","LV","Green Ti",0],
+      [6,3,"Mark Andrews","TE","Bal","JJ's Torn Meniscus",0],
+      [6,4,"Cooper Kupp","WR","Sea","KIRK IS A TERRORIST",0],
+      [6,5,"Aaron Jones","RB","Min","Nabers think I'm selling dope",0],
+      [6,6,"Tee Higgins","WR","Cin","Cucamonga Cracka Killaz",0],
+      [6,7,"George Pickens","WR","Pit","Da Bears",0],
+      [6,8,"Rashee Rice","WR","KC","5IVE TIME",0],
+      [6,9,"Calvin Ridley","WR","Ten","Stable Master",0],
+      [6,10,"Rhamondre Stevenson","RB","NE","Legion of Coom",0],
+      [6,11,"Amari Cooper","WR","Buf","THE FADEDBOYZ",0],
+      [6,12,"Kyle Pitts","TE","Atl","Georgia's Uber Driver",0],
+
+      [7,1,"Brian Robinson Jr.","RB","Wsh","Georgia's Uber Driver",0],
+      [7,2,"Trevor Lawrence","QB","Jax","THE FADEDBOYZ",0],
+      [7,3,"Dalton Kincaid","TE","Buf","Legion of Coom",0],
+      [7,4,"Chris Godwin","WR","TB","Stable Master",0],
+      [7,5,"Jayden Daniels","QB","Wsh","5IVE TIME",0],
+      [7,6,"Tank Dell","WR","Hou","Da Bears",0],
+      [7,7,"Evan Engram","TE","Den","Cucamonga Cracka Killaz",0],
+      [7,8,"Diontae Johnson","WR","Bal","Nabers think I'm selling dope",0],
+      [7,9,"Kirk Cousins","QB","Atl","KIRK IS A TERRORIST",0],
+      [7,10,"Matthew Stafford","QB","LAR","JJ's Torn Meniscus",0],
+      [7,11,"Tua Tagovailoa","QB","Mia","Green Ti",0],
+      [7,12,"Terry McLaurin","WR","Wsh","ACE",0],
+
+      [8,1,"Courtland Sutton","WR","Den","ACE",0],
+      [8,2,"Javonte Williams","RB","Dal","Green Ti",0],
+      [8,3,"Christian Kirk","WR","Hou","JJ's Torn Meniscus",0],
+      [8,4,"George Kittle","TE","SF","KIRK IS A TERRORIST",0],
+      [8,5,"Deshaun Watson","QB","Cle","Nabers think I'm selling dope",0],
+      [8,6,"Rome Odunze","WR","Chi","Cucamonga Cracka Killaz",0],
+      [8,7,"Keenan Allen","WR","Chi","Da Bears",0],
+      [8,8,"Jake Ferguson","TE","Dal","5IVE TIME",0],
+      [8,9,"David Montgomery","RB","Det","Stable Master",0],
+      [8,10,"Christian Watson","WR","GB","Legion of Coom",0],
+      [8,11,"David Njoku","TE","Cle","THE FADEDBOYZ",0],
+      [8,12,"Jayden Reed","WR","GB","Georgia's Uber Driver",0],
+
+      [9,1,"Najee Harris","RB","LAC","Georgia's Uber Driver",0],
+      [9,2,"Jaxon Smith-Njigba","WR","Sea","THE FADEDBOYZ",0],
+      [9,3,"Xavier Worthy","WR","KC","Legion of Coom",0],
+      [9,4,"Cole Kmet","TE","Chi","Stable Master",0],
+      [9,5,"Brian Thomas Jr.","WR","Jax","5IVE TIME",0],
+      [9,6,"Keon Coleman","WR","Buf","Da Bears",0],
+      [9,7,"Jaylen Warren","RB","Pit","Cucamonga Cracka Killaz",0],
+      [9,8,"Ladd McConkey","WR","LAC","Nabers think I'm selling dope",0],
+      [9,9,"Nick Chubb","RB","Cle","KIRK IS A TERRORIST",0],
+      [9,10,"Jordan Addison","WR","Min","JJ's Torn Meniscus",0],
+      [9,11,"Dalton Schultz","TE","Hou","Green Ti",0],
+      [9,12,"Jakobi Meyers","WR","LV","ACE",0],
+
+      [10,1,"Raheem Mostert","RB","LV","ACE",0],
+      [10,2,"Brock Bowers","TE","LV","Green Ti",0],
+      [10,3,"Baker Mayfield","QB","TB","JJ's Torn Meniscus",0],
+      [10,4,"Dallas Goedert","TE","Phi","KIRK IS A TERRORIST",0],
+      [10,5,"Jerry Jeudy","WR","Cle","Nabers think I'm selling dope",0],
+      [10,6,"DeAndre Hopkins","WR","Bal","Cucamonga Cracka Killaz",0],
+      [10,7,"Tyjae Spears","RB","Ten","Da Bears",0],
+      [10,8,"Jonathon Brooks","RB","Car","5IVE TIME",0],
+      [10,9,"Tony Pollard","RB","Ten","Stable Master",0],
+      [10,10,"Will Levis","QB","Ten","Legion of Coom",0],
+      [10,11,"Darnell Mooney","WR","Atl","THE FADEDBOYZ",0],
+      [10,12,"Jerome Ford","RB","Cle","Georgia's Uber Driver",0],
+
+      [11,1,"Hollywood Brown","WR","KC","Georgia's Uber Driver",0],
+      [11,2,"Ezekiel Elliott","RB","FA","THE FADEDBOYZ",0],
+      [11,3,"Zack Moss","RB","Cin","Legion of Coom",0],
+      [11,4,"Austin Ekeler","RB","Wsh","Stable Master",0],
+      [11,5,"Chuba Hubbard","RB","Car","5IVE TIME",0],
+      [11,6,"T.J. Hockenson","TE","Min","Da Bears",0],
+      [11,7,"Drake Maye","QB","NE","Cucamonga Cracka Killaz",0],
+      [11,8,"Bryce Young","QB","Car","Nabers think I'm selling dope",0],
+      [11,9,"Mike Williams","WR","LAC","KIRK IS A TERRORIST",0],
+      [11,10,"Russell Wilson","QB","Pit","JJ's Torn Meniscus",0],
+      [11,11,"Jameson Williams","WR","Det","Green Ti",0],
+      [11,12,"Tyler Lockett","WR","FA","ACE",0],
+
+      [12,1,"Tyler Allgeier","RB","Atl","ACE",0],
+      [12,2,"Geno Smith","QB","LV","Green Ti",0],
+      [12,3,"Devin Singletary","RB","NYG","JJ's Torn Meniscus",0],
+      [12,4,"Derek Carr","QB","NO","KIRK IS A TERRORIST",0],
+      [12,5,"Chase Brown","RB","Cin","Nabers think I'm selling dope",0],
+      [12,6,"Pat Freiermuth","TE","Pit","Cucamonga Cracka Killaz",0],
+      [12,7,"Blake Corum","RB","LAR","Da Bears",0],
+      [12,8,"Bo Nix","QB","Den","5IVE TIME",0],
+      [12,9,"J.K. Dobbins","RB","LAC","Stable Master",0],
+      [12,10,"Romeo Doubs","WR","GB","Legion of Coom",0],
+      [12,11,"Gus Edwards","RB","FA","THE FADEDBOYZ",0],
+      [12,12,"Ja'Lynn Polk","WR","NE","Georgia's Uber Driver",0],
+
+      [13,1,"Gardner Minshew","QB","KC","Georgia's Uber Driver",0],
+      [13,2,"Zach Charbonnet","RB","Sea","THE FADEDBOYZ",0],
+      [13,3,"DeMario Douglas","WR","NE","Legion of Coom",0],
+      [13,4,"Ty Chandler","RB","Min","Stable Master",0],
+      [13,5,"Joshua Palmer","WR","Buf","5IVE TIME",0],
+      [13,6,"Justin Fields","QB","NYJ","Da Bears",0],
+      [13,7,"Hayden Hurst","TE","LAC","Cucamonga Cracka Killaz",0],
+      [13,8,"Khalil Shakir","WR","Buf","Nabers think I'm selling dope",0],
+      [13,9,"Jaleel McLaughlin","RB","Den","KIRK IS A TERRORIST",0],
+      [13,10,"Adam Thielen","WR","Car","JJ's Torn Meniscus",0],
+      [13,11,"Trey Benson","RB","Ari","Green Ti",0],
+      [13,12,"Curtis Samuel","WR","Buf","ACE",0],
+
+      [14,1,"Gabe Davis","WR","Jax","ACE",0],
+      [14,2,"Adonai Mitchell","WR","Ind","Green Ti",0],
+      [14,3,"Taysom Hill","TE","NO","JJ's Torn Meniscus",0],
+      [14,4,"Rashid Shaheed","WR","NO","KIRK IS A TERRORIST",0],
+      [14,5,"Tyler Conklin","TE","NYJ","Nabers think I'm selling dope",0],
+      [14,6,"Antonio Gibson","RB","NE","Cucamonga Cracka Killaz",0],
+      [14,7,"Xavier Legette","WR","Car","Da Bears",0],
+      [14,8,"Rico Dowdle","RB","Car","5IVE TIME",0],
+      [14,9,"Bucky Irving","RB","TB","Stable Master",0],
+      [14,10,"Michael Wilson","WR","Ari","Legion of Coom",0],
+      [14,11,"Michael Penix Jr.","QB","Atl","THE FADEDBOYZ",0],
+      [14,12,"Isaiah Likely","TE","Bal","Georgia's Uber Driver",0],
+
+      [15,1,"Brandin Cooks","WR","Dal","Georgia's Uber Driver",0],
+      [15,2,"Dontayvion Wicks","WR","GB","THE FADEDBOYZ",0],
+      [15,3,"Braelon Allen","RB","NYJ","Legion of Coom",0],
+      [15,4,"Khalil Herbert","RB","Ind","Stable Master",0],
+      [15,5,"Cade Otton","TE","TB","5IVE TIME",0],
+      [15,6,"Ben Sinnott","TE","Wsh","Da Bears",0],
+      [15,7,"Jordan Mason","RB","Min","Cucamonga Cracka Killaz",0],
+      [15,8,"Daniel Jones","QB","Ind","Nabers think I'm selling dope",0],
+      [15,9,"Luke Musgrave","TE","GB","KIRK IS A TERRORIST",0],
+      [15,10,"Tom Brady","QB","TB","JJ's Torn Meniscus",0],
+      [15,11,"Chig Okonkwo","TE","Ten","Green Ti",0],
+      [15,12,"Josh Downs","WR","Ind","ACE",0]
+    ]},
+
+    "2025": { status:"complete", picks:[
+      [1,1,"Lamar Jackson","QB","Bal","Cucamonga Cracka Killaz",0],
+      [1,2,"Saquon Barkley","RB","Phi","Taking Time to Heal",0],
+      [1,3,"CeeDee Lamb","WR","Dal","Njigbas in paris",0],
+      [1,4,"Christian McCaffrey","RB","SF","Da Bears",0],
+      [1,5,"Joe Burrow","QB","Cin","Come Take These Dakshots",0],
+      [1,6,"Amon-Ra St. Brown","WR","Det","FootballDemon",1],
+      [1,7,"Josh Allen","QB","Buf","Boss Allen",1],
+      [1,8,"Bijan Robinson","RB","Atl","5IVE TIME",1],
+      [1,9,"Malik Nabers","WR","NYG","Stable Master",0],
+      [1,10,"Ja'Marr Chase","WR","Cin","Nose",1],
+      [1,11,"Jalen Hurts","QB","Phi","ACE",0],
+      [1,12,"Justin Jefferson","WR","Min","the voices in josh's head",1],
+
+      [2,1,"Ashton Jeanty","RB","LV","the voices in josh's head",0],
+      [2,2,"Patrick Mahomes","QB","KC","ACE",0],
+      [2,3,"Puka Nacua","WR","LAR","Nose",0],
+      [2,4,"De'Von Achane","RB","Mia","Stable Master",0],
+      [2,5,"Nico Collins","WR","Hou","5IVE TIME",0],
+      [2,6,"Derrick Henry","RB","Bal","Boss Allen",0],
+      [2,7,"Tyreek Hill","WR","FA","FootballDemon",0],
+      [2,8,"Jahmyr Gibbs","RB","Det","Come Take These Dakshots",1],
+      [2,9,"Jonathan Taylor","RB","Ind","Da Bears",0],
+      [2,10,"Bucky Irving","RB","TB","Njigbas in paris",0],
+      [2,11,"Josh Jacobs","RB","GB","Taking Time to Heal",0],
+      [2,12,"Drake London","WR","Atl","Cucamonga Cracka Killaz",0],
+
+      [3,1,"Kyren Williams","RB","LAR","Cucamonga Cracka Killaz",0],
+      [3,2,"A.J. Brown","WR","Phi","Taking Time to Heal",0],
+      [3,3,"Davante Adams","WR","LAR","Njigbas in paris",0],
+      [3,4,"James Cook III","RB","Buf","Da Bears",0],
+      [3,5,"Xavier Worthy","WR","KC","Come Take These Dakshots",0],
+      [3,6,"Brock Purdy","QB","SF","FootballDemon",0],
+      [3,7,"Terry McLaurin","WR","Wsh","Boss Allen",0],
+      [3,8,"Marvin Harrison Jr.","WR","Ari","5IVE TIME",0],
+      [3,9,"Garrett Wilson","WR","NYJ","Stable Master",0],
+      [3,10,"Alvin Kamara","RB","NO","Nose",0],
+      [3,11,"DK Metcalf","WR","Pit","ACE",0],
+      [3,12,"D'Andre Swift","RB","Chi","the voices in josh's head",0],
+
+      [4,1,"Courtland Sutton","WR","Den","the voices in josh's head",0],
+      [4,2,"Tetairoa McMillan","WR","Car","ACE",0],
+      [4,3,"Trey McBride","TE","Ari","Nose",1],
+      [4,4,"Omarion Hampton","RB","LAC","Stable Master",0],
+      [4,5,"Breece Hall","RB","NYJ","5IVE TIME",0],
+      [4,6,"James Conner","RB","Ari","Boss Allen",0],
+      [4,7,"C.J. Stroud","QB","Hou","FootballDemon",0],
+      [4,8,"Mike Evans","WR","TB","Come Take These Dakshots",0],
+      [4,9,"TreVeyon Henderson","RB","NE","Da Bears",0],
+      [4,10,"George Kittle","TE","SF","Njigbas in paris",0],
+      [4,11,"Zay Flowers","WR","Bal","Taking Time to Heal",0],
+      [4,12,"Kenneth Walker III","RB","Sea","Cucamonga Cracka Killaz",0],
+
+      [5,1,"Tee Higgins","WR","Cin","Cucamonga Cracka Killaz",1],
+      [5,2,"Bo Nix","QB","Den","Taking Time to Heal",0],
+      [5,3,"Dak Prescott","QB","Dal","Njigbas in paris",0],
+      [5,4,"Justin Herbert","QB","LAC","Da Bears",0],
+      [5,5,"DeVonta Smith","WR","Phi","Come Take These Dakshots",0],
+      [5,6,"Travis Hunter","WR","Jax","FootballDemon",0],
+      [5,7,"DJ Moore","WR","Chi","Boss Allen",0],
+      [5,8,"Caleb Williams","QB","Chi","5IVE TIME",0],
+      [5,9,"Calvin Ridley","WR","Ten","Stable Master",0],
+      [5,10,"Kyler Murray","QB","Ari","Nose",0],
+      [5,11,"Tony Pollard","RB","Ten","ACE",0],
+      [5,12,"Sam LaPorta","TE","Det","the voices in josh's head",0],
+
+      [6,1,"Jerry Jeudy","WR","Cle","the voices in josh's head",0],
+      [6,2,"Aaron Jones Sr.","RB","Min","ACE",0],
+      [6,3,"Isiah Pacheco","RB","KC","Nose",0],
+      [6,4,"Jaylen Waddle","WR","Mia","Stable Master",0],
+      [6,5,"Jayden Daniels","QB","Wsh","5IVE TIME",1],
+      [6,6,"Jameson Williams","WR","Det","Boss Allen",0],
+      [6,7,"David Montgomery","RB","Hou","FootballDemon",0],
+      [6,8,"Travis Kelce","TE","KC","Come Take These Dakshots",0],
+      [6,9,"Drake Maye","QB","NE","Da Bears",0],
+      [6,10,"Rashee Rice","WR","KC","Njigbas in paris",0],
+      [6,11,"Jakobi Meyers","WR","Jax","Taking Time to Heal",0],
+      [6,12,"J.J. McCarthy","QB","Min","Cucamonga Cracka Killaz",0],
+
+      [7,1,"T.J. Hockenson","TE","Min","Cucamonga Cracka Killaz",0],
+      [7,2,"Jordan Love","QB","GB","Taking Time to Heal",0],
+      [7,3,"RJ Harvey","RB","Den","Njigbas in paris",0],
+      [7,4,"Emeka Egbuka","WR","TB","Da Bears",0],
+      [7,5,"George Pickens","WR","Dal","Come Take These Dakshots",0],
+      [7,6,"Rome Odunze","WR","Chi","FootballDemon",0],
+      [7,7,"Mark Andrews","TE","Bal","Boss Allen",0],
+      [7,8,"David Njoku","TE","Cle","5IVE TIME",0],
+      [7,9,"Matthew Golden","WR","GB","Stable Master",0],
+      [7,10,"Bryce Young","QB","Car","Nose",0],
+      [7,11,"Colston Loveland","TE","Chi","ACE",0],
+      [7,12,"Chris Olave","WR","NO","the voices in josh's head",0],
+
+      [8,1,"Jaylen Warren","RB","Pit","the voices in josh's head",0],
+      [8,2,"Tyler Warren","TE","Ind","ACE",0],
+      [8,3,"Stefon Diggs","WR","NE","Nose",0],
+      [8,4,"Evan Engram","TE","Den","Stable Master",0],
+      [8,5,"Jacory Croskey-Merritt","RB","Wsh","5IVE TIME",0],
+      [8,6,"Tyrone Tracy Jr.","RB","NYG","Boss Allen",0],
+      [8,7,"Austin Ekeler","RB","Wsh","FootballDemon",0],
+      [8,8,"Keon Coleman","WR","Buf","Come Take These Dakshots",0],
+      [8,9,"Ladd McConkey","WR","LAC","Da Bears",1],
+      [8,10,"Jaxon Smith-Njigba","WR","Sea","Njigbas in paris",1],
+      [8,11,"Michael Pittman Jr.","WR","Ind","Taking Time to Heal",0],
+      [8,12,"Brian Thomas Jr.","WR","Jax","Cucamonga Cracka Killaz",1],
+
+      [9,1,"Jordan Addison","WR","Min","Cucamonga Cracka Killaz",0],
+      [9,2,"Javonte Williams","RB","Dal","Taking Time to Heal",0],
+      [9,3,"Cooper Kupp","WR","Sea","Njigbas in paris",0],
+      [9,4,"Ricky Pearsall","WR","SF","Da Bears",0],
+      [9,5,"Jared Goff","QB","Det","Come Take These Dakshots",0],
+      [9,6,"Brock Bowers","TE","LV","FootballDemon",1],
+      [9,7,"Chris Godwin Jr.","WR","TB","Boss Allen",0],
+      [9,8,"Deebo Samuel","WR","Wsh","5IVE TIME",0],
+      [9,9,"J.K. Dobbins","RB","Den","Stable Master",0],
+      [9,10,"Josh Downs","WR","Ind","Nose",0],
+      [9,11,"Jauan Jennings","WR","SF","ACE",0],
+      [9,12,"Baker Mayfield","QB","TB","the voices in josh's head",1],
+
+      [10,1,"Cam Skattebo","RB","NYG","the voices in josh's head",0],
+      [10,2,"Dallas Goedert","TE","Phi","ACE",0],
+      [10,3,"Kaleb Johnson","RB","Pit","Nose",0],
+      [10,4,"Justin Fields","QB","NYJ","Stable Master",0],
+      [10,5,"Jayden Reed","WR","GB","5IVE TIME",0],
+      [10,6,"Rhamondre Stevenson","RB","NE","Boss Allen",0],
+      [10,7,"Khalil Shakir","WR","Buf","FootballDemon",0],
+      [10,8,"Amari Cooper","WR","LV","Come Take These Dakshots",0],
+      [10,9,"Keenan Allen","WR","LAC","Da Bears",0],
+      [10,10,"Chuba Hubbard","RB","Car","Njigbas in paris",1],
+      [10,11,"Xavier Legette","WR","Car","Taking Time to Heal",0],
+      [10,12,"Jake Ferguson","TE","Dal","Cucamonga Cracka Killaz",0],
+
+      [11,1,"Trevor Lawrence","QB","Jax","Cucamonga Cracka Killaz",0],
+      [11,2,"Dalton Kincaid","TE","Buf","Taking Time to Heal",0],
+      [11,3,"Nick Chubb","RB","Hou","Njigbas in paris",0],
+      [11,4,"Cedric Tillman","WR","Cle","Da Bears",0],
+      [11,5,"Chase Brown","RB","Cin","Come Take These Dakshots",1],
+      [11,6,"Darnell Mooney","WR","Atl","FootballDemon",0],
+      [11,7,"Hunter Henry","TE","NE","Boss Allen",0],
+      [11,8,"Luther Burden III","WR","Chi","5IVE TIME",0],
+      [11,9,"Rashid Shaheed","WR","Sea","Stable Master",0],
+      [11,10,"Kyle Pitts Sr.","TE","Atl","Nose",0],
+      [11,11,"Jordan Mason","RB","Min","ACE",0],
+      [11,12,"Tua Tagovailoa","QB","Mia","the voices in josh's head",0],
+
+      [12,1,"Joe Mixon","RB","Hou","the voices in josh's head",0],
+      [12,2,"Travis Etienne Jr.","RB","Jax","ACE",0],
+      [12,3,"Trey Benson","RB","Ari","Nose",0],
+      [12,4,"Tank Bigsby","RB","Phi","Stable Master",0],
+      [12,5,"Michael Penix Jr.","QB","Atl","5IVE TIME",0],
+      [12,6,"Geno Smith","QB","LV","Boss Allen",0],
+      [12,7,"Bhayshul Tuten","RB","Jax","FootballDemon",0],
+      [12,8,"Zach Charbonnet","RB","Sea","Come Take These Dakshots",0],
+      [12,9,"Jayden Higgins","WR","Hou","Da Bears",0],
+      [12,10,"Jerome Ford","RB","Cle","Njigbas in paris",0],
+      [12,11,"Cam Ward","QB","Ten","Taking Time to Heal",0],
+      [12,12,"Jaydon Blue","RB","Dal","Cucamonga Cracka Killaz",0],
+
+      [13,1,"Ollie Gordon II","RB","Mia","Cucamonga Cracka Killaz",0],
+      [13,2,"Tyler Allgeier","RB","Atl","Taking Time to Heal",0],
+      [13,3,"Rachaad White","RB","TB","Njigbas in paris",0],
+      [13,4,"Jaxson Dart","QB","NYG","Da Bears",0],
+      [13,5,"Marvin Mims Jr.","WR","Den","Come Take These Dakshots",0],
+      [13,6,"Braelon Allen","RB","NYJ","FootballDemon",0],
+      [13,7,"Sam Darnold","QB","Sea","Boss Allen",0],
+      [13,8,"Matthew Stafford","QB","LAR","5IVE TIME",0],
+      [13,9,"Najee Harris","RB","LAC","Stable Master",0],
+      [13,10,"Wan'Dale Robinson","WR","NYG","Nose",0],
+      [13,11,"Hollywood Brown","WR","KC","ACE",0],
+      [13,12,"Russell Wilson","QB","NYG","the voices in josh's head",0],
+
+      [14,1,"Zach Ertz","TE","Wsh","the voices in josh's head",0],
+      [14,2,"Dylan Sampson","RB","Cle","ACE",0],
+      [14,3,"Jalen Coker","WR","Car","Nose",0],
+      [14,4,"Quinshon Judkins","RB","Cle","Stable Master",0],
+      [14,5,"Kendre Miller","RB","NO","5IVE TIME",0],
+      [14,6,"Jonnu Smith","TE","Pit","Boss Allen",0],
+      [14,7,"Ray Davis","RB","Buf","FootballDemon",0],
+      [14,8,"Brandon Aiyuk","WR","SF","Come Take These Dakshots",0],
+      [14,9,"Woody Marks","RB","Hou","Da Bears",0],
+      [14,10,"Will Shipley","RB","Phi","Njigbas in paris",0],
+      [14,11,"Romeo Doubs","WR","GB","Taking Time to Heal",0],
+      [14,12,"Rashod Bateman","WR","Bal","Cucamonga Cracka Killaz",0],
+
+      [15,1,"Shedeur Sanders","QB","Cle","Cucamonga Cracka Killaz",0],
+      [15,2,"Justice Hill","RB","Bal","Taking Time to Heal",0],
+      [15,3,"DeMario Douglas","WR","NE","Njigbas in paris",0],
+      [15,4,"Tucker Kraft","TE","GB","Da Bears",1],
+      [15,5,"Blake Corum","RB","LAR","Come Take These Dakshots",0],
+      [15,6,"Christian Kirk","WR","Hou","FootballDemon",0],
+      [15,7,"Aaron Rodgers","QB","Pit","Boss Allen",0],
+      [15,8,"Anthony Richardson Sr.","QB","Ind","5IVE TIME",0],
+      [15,9,"Joshua Palmer","WR","Buf","Stable Master",0],
+      [15,10,"Brian Robinson Jr.","RB","SF","Nose",0],
+      [15,11,"Tre' Harris","WR","LAC","ACE",0],
+      [15,12,"Adam Thielen","WR","Pit","the voices in josh's head",0]
+    ]},
+
+    "2026": { status:"upcoming", picks:[] }
+  }
+};
+
+/* ============================================================
+   2. KEEPER MATH — the league rulebook, in code
+   ============================================================ */
+
+const FINAL_ROUND = LEAGUE.rounds;
+const clampRound = r => Math.min(FINAL_ROUND, Math.max(1, r));
+
+/**
+ * Cost to keep a drafted player.
+ * @param {number} origRound  the round they were originally drafted
+ * @param {number} season     1 = first keeper season, 2 = second (and final)
+ * @returns {{round:number, math:string, clamped:boolean}|null}  null once the term limit is up
+ */
+function draftedCost(origRound, season){
+  if (season > 2) return null;                       // 3 seasons rostered — back to the pool
+  if (origRound <= 2){
+    return { round:1, math:`Round ${origRound} pick — always a 1st, every season`, clamped:false };
+  }
+  const raw   = season === 1 ? origRound - 1 : origRound - 3;
+  const round = clampRound(raw);
+  const math  = season === 1
+    ? `${origRound} − 1 = ${raw}`
+    : `${origRound} − 1 = ${origRound - 1}, then ${origRound - 1} − 2 = ${raw}`;
+  return { round, math, clamped: raw !== round };
+}
+
+/** OBJ Rule: waiver pickups cost one round higher than their ADP. R10+ ADP costs a final-rounder. */
+function objCost(adpRound){
+  if (adpRound >= 10) return { round:FINAL_ROUND, math:`ADP Round ${adpRound} → 10 or later → final-round pick`, capped:true };
+  const raw = adpRound + 1;
+  return { round:clampRound(raw), math:`ADP Round ${adpRound} + 1 = Round ${raw}`, capped:false };
+}
+
+const ord = n => n + (["th","st","nd","rd"][(n%100-n%10!==10)*(n%10)] || "th");
+/** "a 4th-round pick" but "an 8th-round pick" */
+const art = n => ([8,11,18].includes(n) ? "an" : "a");
+
+/* ============================================================
+   3. INDEXES
+   ============================================================ */
+
+const YEARS = Object.keys(LEAGUE.years).sort();
+const POS_ORDER = { QB:0, RB:1, WR:2, TE:3 };
+
+function entriesFor(year){
+  return LEAGUE.years[year].picks.map((p, i) => ({
+    year, id:`${year}-${i}`,
+    rd:p[0], pk:p[1], name:p[2], pos:p[3], nfl:p[4], team:p[5], kept:!!p[6]
+  }));
+}
+
+const ALL = YEARS.flatMap(entriesFor);
+const norm = s => s.toLowerCase().replace(/[^a-z0-9 ]/g, "");
+
+/** name -> { "2024": entry, "2025": entry, ... } */
+const BY_NAME = new Map();
+for (const e of ALL){
+  const k = norm(e.name);
+  if (!BY_NAME.has(k)) BY_NAME.set(k, {});
+  BY_NAME.get(k)[e.year] = e;
+}
+
+/**
+ * Walk a keeper chain backwards to find where the current roster stint began.
+ * A pick flagged "K" was kept, so the real acquisition is the last season the
+ * player was actually drafted. Returns the origin entry plus how many seasons
+ * the player will have been rostered by `year`.
+ */
+function traceOrigin(entry){
+  const byYear = BY_NAME.get(norm(entry.name)) || {};
+  let cur = entry;
+  let guard = 0;
+  while (cur.kept && guard++ < 10){
+    const prev = byYear[String(Number(cur.year) - 1)];
+    if (!prev) break;                                 // kept, but no prior board — waiver pickup
+    cur = prev;
+  }
+  return {
+    origin: cur,
+    unresolved: entry.kept && cur.kept,               // chain ran off the edge of our data
+    seasonsRostered: Number(entry.year) - Number(cur.year) + 1
+  };
+}
+
+/* ============================================================
+   4. STATE + RENDER
+   ============================================================ */
+
+const state = {
+  tab: "lookup",
+  year: "all",                 // "all" | "2024" | "2025" | "2026"
+  rosterYear: YEARS.includes("2025") ? "2025" : YEARS[0],
+  team: null,
+  q: "",
+  selected: null,              // entry id
+  source: "draft",             // "draft" | "waiver"
+  season: null,                // manual override of keeper season
+  adp: 5
+};
+
+const $  = s => document.querySelector(s);
+const el = (t, cls, txt) => { const n=document.createElement(t); if(cls) n.className=cls; if(txt!=null) n.textContent=txt; return n; };
+const posVar = p => `var(--${(p||"").toLowerCase()}, var(--etc))`;
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;" }[c]));
+
+/* ---- year segmented control ---- */
+
+function renderYearSeg(){
+  const seg = $("#yearSeg");
+  seg.textContent = "";
+  const opts = state.tab === "lookup" ? ["all", ...YEARS] : YEARS;
+  const active = state.tab === "lookup" ? state.year : state.rosterYear;
+  for (const y of opts){
+    const b = el("button", y === active ? "on" : null, y === "all" ? "All" : y);
+    b.type = "button";
+    b.setAttribute("aria-pressed", String(y === active));
+    b.addEventListener("click", () => {
+      if (state.tab === "lookup"){ state.year = y; state.selected = null; }
+      else { state.rosterYear = y; }
+      render();
+    });
+    seg.appendChild(b);
+  }
+}
+
+/* ---- tabs ---- */
+
+function setTab(tab){
+  state.tab = tab;
+  $("#tab-lookup").setAttribute("aria-selected", String(tab === "lookup"));
+  $("#tab-roster").setAttribute("aria-selected", String(tab === "roster"));
+  $("#panel-lookup").hidden = tab !== "lookup";
+  $("#panel-roster").hidden = tab !== "roster";
+  render();
+}
+$("#tab-lookup").addEventListener("click", () => setTab("lookup"));
+$("#tab-roster").addEventListener("click", () => setTab("roster"));
+
+/* ---- search ---- */
+
+$("#q").addEventListener("input", e => {
+  state.q = e.target.value;
+  state.selected = null;
+  $("#qClear").hidden = !state.q;
+  render();
+});
+$("#qClear").addEventListener("click", () => {
+  state.q = ""; $("#q").value = ""; $("#qClear").hidden = true;
+  state.selected = null; render(); $("#q").focus();
+});
+
+function searchPool(){
+  return state.year === "all" ? ALL : ALL.filter(e => e.year === state.year);
+}
+
+function matches(query){
+  const q = norm(query.trim());
+  if (!q) return [];
+  const terms = q.split(/\s+/);
+  const scored = [];
+  for (const e of searchPool()){
+    const hay = norm(`${e.name} ${e.pos} ${e.nfl} ${e.team}`);
+    if (!terms.every(t => hay.includes(t))) continue;
+    const n = norm(e.name);
+    // exact prefix on the player's name outranks a mid-string or team hit
+    const score = n.startsWith(q) ? 0 : n.includes(q) ? 1 : 2;
+    scored.push([score, e]);
+  }
+  scored.sort((a,b) =>
+    a[0] - b[0] ||
+    a[1].name.localeCompare(b[1].name) ||
+    b[1].year.localeCompare(a[1].year)
+  );
+  return scored.slice(0, 40).map(x => x[1]);
+}
+
+function renderLookup(){
+  const list = $("#results");
+  const emptyBox = $("#lookupEmpty");
+  const detail = $("#lookupDetail");
+  const searchUI = $("#lookupSearch");
+
+  $("#searchScope").textContent = state.year === "all"
+    ? `Search all ${ALL.length} drafted players · ${YEARS.filter(y=>LEAGUE.years[y].picks.length).join(" + ")}`
+    : `Search the ${state.year} draft board`;
+
+  if (state.selected){
+    searchUI.hidden = true;
+    detail.textContent = "";
+    detail.appendChild(renderDetail(ALL.find(e => e.id === state.selected)));
+    return;
+  }
+  searchUI.hidden = false;
+  detail.textContent = "";
+
+  list.textContent = "";
+  emptyBox.hidden = true;
+
+  if (!state.q.trim()){
+    if (state.year !== "all" && LEAGUE.years[state.year].status === "upcoming"){
+      emptyBox.hidden = false;
+      emptyBox.innerHTML = `<strong>${state.year} hasn't drafted yet</strong>
+        Switch to <b>All</b> or a past year to look up a player's keeper cost for the ${state.year} season.`;
+      return;
+    }
+    emptyBox.hidden = false;
+    emptyBox.innerHTML = `<strong>Who are you thinking about?</strong>
+      Type a name to see what they'd cost to keep — or a team name to see everyone they drafted.`;
+    return;
+  }
+
+  const hits = matches(state.q);
+  if (!hits.length){
+    emptyBox.hidden = false;
+    emptyBox.innerHTML = `<strong>No match</strong>
+      Nobody named “${esc(state.q)}” was drafted${state.year === "all" ? "" : " in " + state.year}.
+      Undrafted players go through the <b>waiver wire</b> rules — open any player and switch the acquisition to Waiver wire.`;
+    return;
+  }
+
+  for (const e of hits){
+    const li = el("li");
+    const b = el("button", "result");
+    b.type = "button";
+    b.style.setProperty("--pos", posVar(e.pos));
+
+    const grow = el("div", "grow");
+    grow.appendChild(el("div", "name", e.name));
+    grow.appendChild(el("div", "meta", `${e.nfl} · ${e.team}`));
+
+    const chip = el("span", "pos", e.pos);
+    chip.style.setProperty("--pos", posVar(e.pos));
+
+    const coord = el("div", "coord");
+    coord.innerHTML = `${e.kept ? "kept " : ""}R${e.rd}<small>${e.year} · PICK ${e.pk}</small>`;
+
+    b.append(grow, chip, coord);
+    b.addEventListener("click", () => {
+      state.selected = e.id;
+      state.source = "draft";
+      state.season = null;
+      render();
+      window.scrollTo({ top:0, behavior:"smooth" });
+    });
+    li.appendChild(b);
+    list.appendChild(li);
+  }
+}
+
+/* ---- the detail / calculator card ---- */
+
+function renderDetail(e){
+  const card = el("div", "detail");
+  const trace = traceOrigin(e);
+  const origin = trace.origin;
+  const targetYear = Number(e.year) + 1;
+  const autoSeason = targetYear - Number(origin.year);   // 1 = first keeper season
+  const season = state.season || Math.min(Math.max(autoSeason, 1), 3);
+
+  /* header */
+  const head = el("div", "detail-head");
+  const h = el("div");
+  h.appendChild(el("h2", null, e.name));
+  const meta = el("div", "meta");
+  meta.innerHTML = `<span class="pos" style="--pos:${posVar(e.pos)}">${esc(e.pos)}</span>
+    &nbsp;${esc(e.nfl)} · ${esc(e.team)} · ${e.year} R${e.rd}.${String(e.pk).padStart(2,"0")}`;
+  h.appendChild(meta);
+  const back = el("button", "back", "← Back");
+  back.type = "button";
+  back.addEventListener("click", () => { state.selected = null; state.season = null; render(); });
+  head.append(h, back);
+  card.appendChild(head);
+
+  const body = el("div", "detail-body");
+
+  /* acquisition source */
+  const srcField = el("div", "field");
+  srcField.appendChild(el("div", "lbl", "How was this player acquired?"));
+  const srcSeg = el("div", "seg");
+  for (const [key, label] of [["draft","Drafted"],["waiver","Waiver wire"]]){
+    const b = el("button", state.source === key ? "on" : null, label);
+    b.type = "button";
+    b.setAttribute("aria-pressed", String(state.source === key));
+    b.addEventListener("click", () => { state.source = key; render(); });
+    srcSeg.appendChild(b);
+  }
+  srcField.appendChild(srcSeg);
+  body.appendChild(srcField);
+
+  if (state.source === "waiver"){
+    body.append(...waiverBlock());
+  } else {
+    body.append(...draftedBlock(e, origin, trace, targetYear, autoSeason, season));
+  }
+
+  card.appendChild(body);
+  return card;
+}
+
+function draftedBlock(e, origin, trace, targetYear, autoSeason, season){
+  const out = [];
+
+  /* what we worked out from the boards */
+  if (e.kept && !trace.unresolved){
+    const note = el("div", "auto-note");
+    note.innerHTML = `ESPN flagged this as a <b>kept</b> pick. Tracing it back:
+      originally drafted <b>${origin.year} Round ${origin.rd}</b> by ${origin.team},
+      so ${e.year} was roster season <b>${trace.seasonsRostered}</b> of 3.`;
+    out.push(note);
+  } else if (e.kept && trace.unresolved){
+    const note = el("div", "auto-note");
+    note.innerHTML = `ESPN flagged this as a <b>kept</b> pick, but they weren't on the
+      ${Number(e.year) - 1} draft board — so they were picked up mid-season off waivers
+      or by trade. ${Number(e.year) - 1} was roster season 1. Set the keeper season by
+      hand below, or switch to <b>Waiver wire</b> to price them by ADP.`;
+    out.push(note);
+  }
+
+  /* keeper season selector */
+  const f = el("div", "field");
+  f.appendChild(el("div", "lbl", `Keeping them for ${targetYear} would be their…`));
+  const seg = el("div", "seg");
+  // 1st and 2nd are the only keepable seasons; a 3rd only appears when the
+  // boards say this player has already used both, so the limit is visible.
+  const options = season >= 3 ? [1,2,3] : [1,2];
+  const labels = { 1:"1st keeper yr", 2:"2nd keeper yr", 3:"3rd — pool" };
+  for (const s of options){
+    const b = el("button", season === s ? "on" : null, labels[s]);
+    b.type = "button";
+    b.setAttribute("aria-pressed", String(season === s));
+    b.addEventListener("click", () => { state.season = s; render(); });
+    seg.appendChild(b);
+  }
+  f.appendChild(seg);
+  if (!state.season && autoSeason >= 1 && autoSeason <= 3){
+    const hint = el("div", "what");
+    hint.style.cssText = "font-family:var(--mono);font-size:10.5px;letter-spacing:.06em;color:var(--faint)";
+    hint.textContent = `AUTO-SET FROM THE ${origin.year} BOARD — TAP TO OVERRIDE`;
+    f.appendChild(hint);
+  }
+  out.push(f);
+
+  /* the number */
+  const res = draftedCost(origin.rd, season);
+  const cost = el("div", "cost" + (res ? "" : " void"));
+  if (res){
+    cost.innerHTML = `<div class="lead">${targetYear} keeper cost</div>
+      <div class="big">Round ${res.round}</div>
+      <div class="tail">Costs ${esc(e.team)} their <b>${ord(res.round)}-round pick</b></div>
+      <div class="math">${res.math}${res.clamped ? " → floors at Round 1" : ""}</div>`;
+  } else {
+    cost.innerHTML = `<div class="lead">${targetYear} keeper cost</div>
+      <div class="big">Not eligible</div>
+      <div class="tail">Three seasons on a roster is the limit — back to the draft pool.</div>`;
+  }
+  out.push(cost);
+
+  /* flags */
+  if (res && season === 2){
+    out.push(flag("warn", "Final keeper season.",
+      `${targetYear} would be roster season 3. After ${targetYear} this player must return to the general draft pool.`));
+  }
+  if (!res){
+    out.push(flag("stop", "Term limit reached.",
+      `Acquired for ${origin.year}, so ${origin.year}–${Number(origin.year)+2} were their three seasons.`));
+  }
+  if (res && origin.rd <= 2){
+    out.push(flag("info", "Round 1–2 rule.",
+      "Players originally drafted in the first two rounds always cost a 1st-round pick, no matter how many seasons they've been kept."));
+  }
+  out.push(flag("info", "Injury exception.",
+    "If they were rostered all season but scored in 3 games or fewer due to injury, that season doesn't count toward the three-season limit — keep them in the IR slot."));
+
+  /* the ladder */
+  const lf = el("div", "field");
+  lf.appendChild(el("div", "lbl", "Roster clock"));
+  lf.appendChild(ladder(origin, season, targetYear));
+  out.push(lf);
+
+  return out;
+}
+
+function ladder(origin, season, targetYear){
+  const wrap = el("div", "ladder");
+  const y0 = Number(origin.year);
+  const steps = [
+    { yr:y0,   n:"1", what:`${origin.kept ? "Acquired" : "Drafted"} — Round ${origin.rd}` },
+    { yr:y0+1, n:"2", what:costLabel(origin.rd, 1) },
+    { yr:y0+2, n:"3", what:costLabel(origin.rd, 2) },
+    { yr:y0+3, n:"×", what:"Returns to the draft pool", end:true }
+  ];
+  for (const s of steps){
+    const rung = el("div", "rung");
+    const isNow = s.yr === targetYear;
+    if (isNow) rung.classList.add("on");
+    if (s.end) rung.classList.add("end");
+    if (s.yr < targetYear) rung.classList.add("past");
+
+    const rail = el("div", "rail");
+    rail.appendChild(el("div", "node", s.n));
+    rail.appendChild(el("div", "stem"));
+
+    const txt = el("div", "txt");
+    txt.appendChild(el("div", "yr", String(s.yr) + (s.end ? "" : " season")));
+    txt.appendChild(el("div", "what", s.what));
+
+    rung.append(rail, txt);
+    wrap.appendChild(rung);
+  }
+  return wrap;
+}
+
+function costLabel(origRound, season){
+  const r = draftedCost(origRound, season);
+  return r ? `Keep for ${art(r.round)} ${ord(r.round)}-round pick` : "Not eligible";
+}
+
+function waiverBlock(){
+  const out = [];
+
+  const f = el("div", "field");
+  f.appendChild(el("div", "lbl", "Their ADP round in the upcoming draft"));
+  const step = el("div", "stepper");
+  const minus = el("button", null, "−"); minus.type = "button"; minus.setAttribute("aria-label","Lower the ADP round");
+  const plus  = el("button", null, "+"); plus.type  = "button"; plus.setAttribute("aria-label","Raise the ADP round");
+  const input = el("input");
+  input.type = "number"; input.min = "1"; input.max = String(FINAL_ROUND);
+  input.inputMode = "numeric"; input.value = String(state.adp);
+  input.setAttribute("aria-label", "ADP round");
+
+  const setAdp = v => { state.adp = clampRound(Number(v) || 1); render(); };
+  minus.addEventListener("click", () => setAdp(state.adp - 1));
+  plus.addEventListener("click",  () => setAdp(state.adp + 1));
+  input.addEventListener("change", ev => setAdp(ev.target.value));
+
+  step.append(minus, input, plus);
+  f.appendChild(step);
+  out.push(f);
+
+  const res = objCost(state.adp);
+  const cost = el("div", "cost");
+  cost.innerHTML = `<div class="lead">Waiver keeper cost · OBJ rule</div>
+    <div class="big">Round ${res.round}</div>
+    <div class="tail">Costs their <b>${ord(res.round)}-round pick</b>${res.capped ? " — the final round" : ""}</div>
+    <div class="math">${res.math}</div>`;
+  out.push(cost);
+
+  out.push(flag("info", "Eligibility.",
+    "A waiver pickup only counts as a keeper if they were on your roster for at least 3 consecutive active play weeks. They don't have to have started."));
+  out.push(flag("info", "The clock still runs.",
+    "The season you picked them up is season 1 of 3. A waiver keeper follows the same three-season limit as a drafted one."));
+
+  return out;
+}
+
+function flag(kind, bold, rest){
+  const f = el("div", "flag " + kind);
+  f.appendChild(el("span", "dot"));
+  const t = el("span");
+  t.innerHTML = `<b>${bold}</b> ${rest}`;
+  f.appendChild(t);
+  return f;
+}
+
+/* ---- roster tab ---- */
+
+function teamsIn(year){
+  return [...new Set(LEAGUE.years[year].picks.map(p => p[5]))].sort((a,b) =>
+    a.localeCompare(b, undefined, { sensitivity:"base" })
+  );
+}
+
+function renderRoster(){
+  const year = state.rosterYear;
+  const sel = $("#teamSel");
+  const out = $("#rosterOut");
+  out.textContent = "";
+
+  const teams = teamsIn(year);
+  if (!teams.includes(state.team)) state.team = teams[0] || null;
+
+  sel.textContent = "";
+  if (!teams.length){
+    sel.disabled = true;
+    sel.appendChild(new Option("No teams yet", ""));
+    const box = el("div", "empty");
+    box.innerHTML = `<strong>The ${year} draft hasn't happened</strong>
+      Once the board is up, drop it into the data file and every ${year} roster appears here.
+      Keeper costs for the ${year} season already work — check the Player Lookup tab.`;
+    out.appendChild(box);
+    return;
+  }
+  sel.disabled = false;
+  for (const t of teams){
+    const o = new Option(t, t);
+    o.selected = t === state.team;
+    sel.appendChild(o);
+  }
+
+  const picks = LEAGUE.years[year].picks
+    .filter(p => p[5] === state.team)
+    .sort((a,b) => a[0] - b[0]);
+
+  const head = el("div", "roster-head");
+  head.appendChild(el("h2", null, state.team));
+  const keptCount = picks.filter(p => p[6]).length;
+  head.appendChild(el("div", "count",
+    `${year} · ${picks.length} PICKS${keptCount ? ` · ${keptCount} KEPT` : ""}`));
+  out.appendChild(head);
+
+  const wrap = el("div", "tablewrap");
+  const table = el("table");
+  table.innerHTML = `<thead><tr>
+      <th class="c-rd">Rd</th><th class="c-pk">Pick</th>
+      <th>Player</th><th class="c-po">Pos</th>
+    </tr></thead>`;
+  const tb = el("tbody");
+  for (const p of picks){
+    const [rd, pk, name, pos, nfl, , kept] = p;
+    const tr = el("tr");
+    if (kept) tr.classList.add("kept");
+
+    const c1 = el("td", "c-rd", String(rd));
+    const c2 = el("td", "c-pk", String(pk).padStart(2, "0"));
+    const c3 = el("td", "c-pl");
+    c3.innerHTML = `<div class="n">${esc(name)}${kept ? '<span class="kchip">KEPT</span>' : ""}</div>
+                    <div class="t">${esc(nfl)}</div>`;
+    const c4 = el("td", "c-po");
+    const chip = el("span", "pos", pos);
+    chip.style.setProperty("--pos", posVar(pos));
+    c4.appendChild(chip);
+
+    tr.append(c1, c2, c3, c4);
+    tb.appendChild(tr);
+  }
+  table.appendChild(tb);
+  wrap.appendChild(table);
+  out.appendChild(wrap);
+}
+
+$("#teamSel").addEventListener("change", e => { state.team = e.target.value; render(); });
+
+/* ---- top-level render ---- */
+
+function render(){
+  renderYearSeg();
+  if (state.tab === "lookup") renderLookup(); else renderRoster();
+}
+
+render();
+</script>
+<!--ARTIFACT:END-->
+</body>
+</html>

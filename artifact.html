@@ -220,6 +220,17 @@ body{
   font-family:var(--mono); font-size:10px; letter-spacing:.1em;
   text-transform:uppercase; color:var(--faint); line-height:1.8;
 }
+.menu-foot .live{ color:var(--gold); }
+.menu-foot .warnx{ color:var(--warn); text-transform:none; letter-spacing:.02em; }
+.sync-btn{
+  appearance:none; cursor:pointer; margin-top:10px;
+  background:var(--raised); border:1px solid var(--line); border-radius:7px;
+  color:var(--muted); padding:7px 10px;
+  font-family:var(--mono); font-size:10px; letter-spacing:.1em; text-transform:uppercase;
+}
+.sync-btn:hover{ color:var(--gold); border-color:var(--gold-dim); }
+.sync-btn:focus-visible{ outline:2px solid var(--gold); outline-offset:2px; }
+.sync-btn[disabled]{ opacity:.5; cursor:default; }
 
 /* ---------- layout ---------- */
 
@@ -611,8 +622,8 @@ footer{
   </div>
   <ul class="menu-list" id="menuList"></ul>
   <div class="menu-foot">
-    12 Teams · 15 Rounds<br>
-    2024 &amp; 2025 boards loaded
+    <div id="syncStatus">12 Teams · 15 Rounds</div>
+    <button class="sync-btn" id="syncBtn" type="button">Refresh from Sleeper</button>
   </div>
 </nav>
 
@@ -1116,7 +1127,6 @@ const LEAGUE = {
    2. KEEPER MATH — the league rulebook, in code
    ============================================================ */
 
-const FINAL_ROUND = LEAGUE.rounds;
 const clampRound = r => Math.min(FINAL_ROUND, Math.max(1, r));
 
 /**
@@ -1153,8 +1163,18 @@ const art = n => ([8,11,18].includes(n) ? "an" : "a");
    3. INDEXES
    ============================================================ */
 
-const YEARS = Object.keys(LEAGUE.years).sort();
-const POS_ORDER = { QB:0, RB:1, WR:2, TE:3 };
+const norm = s => String(s).toLowerCase().replace(/[^a-z0-9 ]/g, "").replace(/\s+/g, " ").trim();
+
+/**
+ * Identity key for matching the same player across boards. ESPN and Sleeper
+ * disagree about generational suffixes ("Marvin Harrison Jr." vs "Marvin
+ * Harrison"), so the trailing suffix is dropped for matching only — the
+ * display name is always whatever the board said.
+ */
+const key = s => norm(s).replace(/ (jr|sr|ii|iii|iv)$/, "").trim();
+
+// Rebuilt whenever the boards change — a Sleeper sync replaces whole seasons.
+let YEARS = [], ALL = [], BY_NAME = new Map(), FINAL_ROUND = LEAGUE.rounds;
 
 function entriesFor(year){
   return LEAGUE.years[year].picks.map((p, i) => ({
@@ -1163,16 +1183,23 @@ function entriesFor(year){
   }));
 }
 
-const ALL = YEARS.flatMap(entriesFor);
-const norm = s => s.toLowerCase().replace(/[^a-z0-9 ]/g, "");
+function rebuildIndexes(){
+  YEARS = Object.keys(LEAGUE.years).sort();
+  ALL   = YEARS.flatMap(entriesFor);
+  FINAL_ROUND = LEAGUE.rounds;
 
-/** name -> { "2024": entry, "2025": entry, ... } */
-const BY_NAME = new Map();
-for (const e of ALL){
-  const k = norm(e.name);
-  if (!BY_NAME.has(k)) BY_NAME.set(k, {});
-  BY_NAME.get(k)[e.year] = e;
+  BY_NAME = new Map();                     // key -> { "2024": entry, "2025": entry }
+  for (const e of ALL){
+    const k = key(e.name);
+    if (!BY_NAME.has(k)) BY_NAME.set(k, {});
+    BY_NAME.get(k)[e.year] = e;
+  }
 }
+rebuildIndexes();
+
+/** The newest season that actually has a board. */
+const latestYear = () =>
+  [...YEARS].reverse().find(y => LEAGUE.years[y].picks.length) || YEARS[0];
 
 /**
  * Walk a keeper chain backwards to find where the current roster stint began.
@@ -1181,7 +1208,7 @@ for (const e of ALL){
  * the player will have been rostered by `year`.
  */
 function traceOrigin(entry){
-  const byYear = BY_NAME.get(norm(entry.name)) || {};
+  const byYear = BY_NAME.get(key(entry.name)) || {};
   let cur = entry;
   let guard = 0;
   while (cur.kept && guard++ < 10){
@@ -1205,7 +1232,6 @@ function traceOrigin(entry){
      roster  — one franchise's board
    ============================================================ */
 
-const LATEST = [...YEARS].reverse().find(y => LEAGUE.years[y].picks.length) || YEARS[0];
 
 const state = {
   tab: "calc",
@@ -1232,7 +1258,7 @@ const yearVar = y => `var(--y${y}, var(--yall))`;
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;" }[c]));
 
 /** The year the current tab is actually showing. Rosters can't show "all". */
-const activeYear = () => (state.year === "all" ? LATEST : state.year);
+const activeYear = () => (state.year === "all" ? latestYear() : state.year);
 
 /* ---- year segmented control ---- */
 
@@ -1280,6 +1306,11 @@ function renderMenu(){
     li.appendChild(b);
     list.appendChild(li);
   }
+
+  const status = $("#syncStatus");
+  if (status) status.innerHTML = syncStatusText();
+  const btn = $("#syncBtn");
+  if (btn) btn.disabled = sync.state === "loading";
 }
 
 const menuEl = $("#menu"), scrimEl = $("#scrim"), menuBtn = $("#menuBtn");
@@ -1310,6 +1341,7 @@ menuBtn.addEventListener("click", () => {
   menuEl.classList.contains("open") ? closeMenu(true) : openMenu();
 });
 $("#menuClose").addEventListener("click", () => closeMenu(true));
+$("#syncBtn").addEventListener("click", () => syncSleeper({ force:true }));
 scrimEl.addEventListener("click", () => closeMenu(true));
 document.addEventListener("keydown", e => {
   if (e.key === "Escape" && menuEl.classList.contains("open")) closeMenu(true);
@@ -1317,7 +1349,7 @@ document.addEventListener("keydown", e => {
 
 function setSection(id){
   // the roster board is always one specific year
-  if (id === "roster" && state.year === "all") state.year = LATEST;
+  if (id === "roster" && state.year === "all") state.year = latestYear();
   state.tab = id;
   for (const s of SECTIONS) $(`#panel-${s.id}`).hidden = s.id !== id;
   $("#sectionLabel").textContent = SECTIONS.find(s => s.id === id).name;
@@ -1522,7 +1554,7 @@ function renderCostCard(e){
  * or a keeper, and what that makes the season count.
  */
 function keeperHistory(e, trace){
-  const byYear = BY_NAME.get(norm(e.name)) || {};
+  const byYear = BY_NAME.get(key(e.name)) || {};
   const wrap = el("div", "khist");
 
   for (const y of YEARS){
@@ -1782,7 +1814,7 @@ function renderHistory(){
     const list = el("ul", "results");
     for (const e of hits){
       list.appendChild(resultRow(e, () => {
-        state.histName = norm(e.name); render(); window.scrollTo({ top:0, behavior:"smooth" });
+        state.histName = key(e.name); render(); window.scrollTo({ top:0, behavior:"smooth" });
       }));
     }
     out.appendChild(list);
@@ -1860,8 +1892,8 @@ function fullBoard(year){
 }
 
 /** Every board a player appears on, oldest first. */
-function playerHistory(key){
-  const byYear = BY_NAME.get(key) || {};
+function playerHistory(nameKey){
+  const byYear = BY_NAME.get(nameKey) || {};
   const any = YEARS.map(y => byYear[y]).find(Boolean);
 
   const card = el("div", "detail");
@@ -2017,6 +2049,199 @@ function render(){
   else                              renderRoster();
 }
 
+
+/* ============================================================
+   5. SLEEPER SYNC
+
+   The league moved to Sleeper, whose read API is public and needs no key.
+   The page pulls its own boards at load: league chain -> drafts -> picks.
+   Draft picks carry the player's name, position and NFL team in `metadata`,
+   so this never needs the 5MB /players/nfl dump.
+
+   Everything here is best-effort. The ESPN boards below stay compiled in as
+   the floor: if Sleeper is unreachable, rate-limited, or shaped differently
+   than expected, the page renders exactly as it did before.
+   ============================================================ */
+
+const SLEEPER = {
+  leagueId: "1399177243342667776",
+  base:     "https://api.sleeper.app/v1",
+  cacheKey: "nfa.sleeper.v2",
+  ttlMs:    30 * 60 * 1000,   // half an hour
+  maxHops:  8                 // guard against a cyclic previous_league_id
+};
+
+// What the last sync did, surfaced in the menu so a silent failure isn't silent.
+const sync = { state:"idle", at:null, seasons:[], league:null, error:null, from:null };
+
+async function getJSON(url){
+  const r = await fetch(url, { headers:{ accept:"application/json" } });
+  if (!r.ok) throw new Error(`HTTP ${r.status} on ${url.replace(SLEEPER.base, "")}`);
+  return r.json();
+}
+
+/**
+ * Walk previous_league_id back through the seasons Sleeper knows about and
+ * return one entry per season that has a completed draft.
+ */
+async function fetchSleeperSeasons(){
+  const out = [];
+  let id = SLEEPER.leagueId;
+
+  for (let hop = 0; id && hop < SLEEPER.maxHops; hop++){
+    const lg = await getJSON(`${SLEEPER.base}/league/${id}`);
+
+    const [users, rosters, drafts] = await Promise.all([
+      getJSON(`${SLEEPER.base}/league/${id}/users`).catch(() => []),
+      getJSON(`${SLEEPER.base}/league/${id}/rosters`).catch(() => []),
+      getJSON(`${SLEEPER.base}/league/${id}/drafts`).catch(() => [])
+    ]);
+
+    // roster_id -> the name a human would recognise
+    const userById = new Map((users || []).map(u => [u.user_id, u]));
+    const teamOf = new Map();
+    for (const r of rosters || []){
+      const u = userById.get(r.owner_id);
+      teamOf.set(r.roster_id, u?.metadata?.team_name || u?.display_name || `Roster ${r.roster_id}`);
+    }
+
+    for (const d of drafts || []){
+      if (!d?.draft_id) continue;
+      const picks = await getJSON(`${SLEEPER.base}/draft/${d.draft_id}/picks`).catch(() => []);
+      if (!picks?.length) continue;
+
+      const teams  = Number(d.settings?.teams) || (rosters || []).length || 12;
+      const rounds = Number(d.settings?.rounds) || 0;
+      const slotToRoster = d.slot_to_roster_id || {};
+
+      const rows = picks.map(p => {
+        const rd = Number(p.round) || 1;
+        // pick_no is the overall pick; ESPN's boards number within the round
+        const pk = Number(p.pick_no) ? Number(p.pick_no) - (rd - 1) * teams
+                                     : Number(p.draft_slot) || 0;
+        const m = p.metadata || {};
+        const name = [m.first_name, m.last_name].filter(Boolean).join(" ").trim();
+        const rosterId = p.roster_id ?? slotToRoster[p.draft_slot];
+        return [
+          rd, pk,
+          name || `Player ${p.player_id}`,
+          (m.position || "").toUpperCase(),
+          m.team || "FA",
+          teamOf.get(rosterId) || `Roster ${rosterId}`,
+          p.is_keeper ? 1 : 0
+        ];
+      }).filter(r => r[0] && r[1]);
+
+      out.push({
+        season: String(d.season || lg.season),
+        rounds: rounds || Math.max(...rows.map(r => r[0])),
+        picks: rows.sort((a, b) => a[0] - b[0] || a[1] - b[1]),
+        leagueName: lg.name
+      });
+    }
+
+    id = lg.previous_league_id;
+  }
+  return out;
+}
+
+/** Fold fetched seasons into LEAGUE. Sleeper wins for any season it supplies. */
+function applySeasons(seasons){
+  let changed = 0;
+  for (const s of seasons){
+    if (!s.picks.length) continue;
+    LEAGUE.years[s.season] = { status:"complete", picks:s.picks, source:"sleeper" };
+    LEAGUE.rounds = Math.max(LEAGUE.rounds, s.rounds || 0);
+    changed++;
+  }
+  if (changed) rebuildIndexes();
+  return changed;
+}
+
+/* ---- cache: keeps the page instant on repeat visits, and usable offline ---- */
+
+function readCache(){
+  try {
+    const raw = localStorage.getItem(SLEEPER.cacheKey);
+    if (!raw) return null;
+    const c = JSON.parse(raw);
+    return Array.isArray(c?.seasons) ? c : null;
+  } catch { return null; }
+}
+function writeCache(seasons, league){
+  try {
+    localStorage.setItem(SLEEPER.cacheKey, JSON.stringify({ ts:Date.now(), seasons, league }));
+  } catch { /* private mode, quota, blocked site data — the page works anyway */ }
+}
+
+/**
+ * Apply anything cached straight away, then refresh from the network unless
+ * the cache is still warm. Never throws: a failure leaves the ESPN boards up.
+ */
+async function syncSleeper({ force = false } = {}){
+  const cached = readCache();
+  if (cached && applySeasons(cached.seasons)){
+    sync.state = "cache"; sync.from = "cache";
+    sync.at = cached.ts; sync.seasons = cached.seasons.map(s => s.season).sort();
+    sync.league = cached.league || null;
+    render();
+  }
+
+  const fresh = cached && (Date.now() - cached.ts) < SLEEPER.ttlMs;
+  if (fresh && !force){ publishDebug(); renderMenu(); return; }
+
+  sync.state = "loading"; sync.error = null; renderMenu();
+  try {
+    const seasons = await fetchSleeperSeasons();
+    if (!seasons.length) throw new Error("no completed drafts returned");
+    applySeasons(seasons);
+    const leagueName = seasons[0]?.leagueName || null;
+    writeCache(seasons, leagueName);
+    sync.state = "live"; sync.from = "network"; sync.at = Date.now();
+    sync.seasons = seasons.map(s => s.season).sort();
+    sync.league = leagueName;
+  } catch (err){
+    sync.state = cached ? "cache" : "failed";
+    sync.error = String(err && err.message || err);
+  }
+  publishDebug();
+  render();
+}
+
+/** `window.__nfa` in the console says what the last sync actually did. */
+function publishDebug(){
+  window.__nfa = {
+    sync,
+    years: Object.keys(LEAGUE.years),
+    rounds: LEAGUE.rounds,
+    sources: Object.fromEntries(YEARS.map(y => [y, LEAGUE.years[y].source || "espn"])),
+    resync: () => syncSleeper({ force:true })
+  };
+}
+
+/** One line in the menu saying where the boards came from. */
+function syncStatusText(){
+  const loaded = YEARS
+    .filter(y => LEAGUE.years[y].picks.length)
+    .map(y => LEAGUE.years[y].source === "sleeper"
+      ? `<span class="live">${y} live</span>`
+      : `${y} espn`)
+    .join(" · ");
+  const head = {
+    loading: "Loading from Sleeper…",
+    live:    "Synced from Sleeper",
+    cache:   sync.error ? "Sleeper unreachable — saved copy" : "Saved from Sleeper",
+    failed:  "Sleeper unreachable"
+  }[sync.state] || `${LEAGUE.teamCount} teams · ${LEAGUE.rounds} rounds`;
+
+  let out = `${head}<br>${loaded || "no boards"}`;
+  if (sync.error) out += `<br><span class="warnx">${esc(sync.error)}</span>`;
+  return out;
+}
+
+/* ---- boot ---- */
+
 renderMenu();
 render();
+syncSleeper();
 </script>

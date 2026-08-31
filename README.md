@@ -77,24 +77,63 @@ something.
 
 ## Draft data
 
-Boards live in the `LEAGUE` object at the top of the `<script>` in `index.html`.
-Each pick is a tuple:
+Two sources, in layers.
+
+### Live, from Sleeper
+
+The league is on Sleeper (`1399177243342667776`), whose read API is public and
+needs no key. The page fetches its own boards on load, in the viewer's browser:
+
+```
+/league/{id}                  → season, settings, previous_league_id
+/league/{id}/users            → owners
+/league/{id}/rosters          → roster_id → owner
+/league/{id}/drafts           → draft ids for that season
+/draft/{draft_id}/picks       → the board
+```
+
+It follows `previous_league_id` back through earlier Sleeper seasons, so history
+accumulates on its own as the league ages. Draft picks carry the player's name,
+position and NFL team in `metadata`, so **this never downloads the 5MB
+`/players/nfl` dump**. Keeper flags come from Sleeper's own `is_keeper` rather
+than being inferred.
+
+Results are cached in `localStorage` for 30 minutes, so repeat visits are
+instant and the page still works on a plane. *Refresh from Sleeper* in the menu
+forces a re-fetch.
+
+### Compiled-in, from ESPN
+
+The 2024 and 2025 boards, transcribed from ESPN screenshots, ship inside
+`index.html` in the `LEAGUE` object. Each pick is a tuple:
 
 ```js
 [round, pick, player, position, nflTeam, fantasyTeam, keptFlag]
 ```
 
-`keptFlag` is `1` when ESPN marked the pick with a `K` (kept, not drafted) — that
-flag is what lets the app trace a keeper back to their original draft round.
+These are the floor. If Sleeper is unreachable, rate-limited, or shaped
+differently than expected, the sync fails quietly and the page renders exactly
+as it would have without it. A live season **replaces** the archived one of the
+same year; the menu names which years are `live` and which are `espn` so you can
+always see what you're looking at.
 
-2024 and 2025 are loaded. **To add 2026**, fill in `years["2026"].picks` with the
-same tuples and change its `status` from `"upcoming"` to `"complete"`. Nothing
-else needs to change — the year selector, team dropdown, and search all read from
-that object. Adding a year does not break the keeper tracing; it extends it.
+As a check on both the transcription and the cost rules, all 16 traceable 2025
+keepers land on exactly the round the rules predict from their 2024 draft slot.
 
-The 2024 and 2025 boards were transcribed from ESPN screenshots. As a check on
-both the transcription and the cost rules, all 16 traceable 2025 keepers land on
-exactly the round the rules predict from their 2024 draft slot.
+### Crossing the sources
+
+Keeper tracing spans the migration: a player drafted on ESPN in 2024, kept on
+ESPN in 2025, and kept again on Sleeper in 2026 correctly reads as roster season
+3 of 3 and is ineligible for 2027. Matching tolerates the two platforms
+disagreeing about generational suffixes — ESPN's "Marvin Harrison Jr." and
+Sleeper's "Marvin Harrison" resolve to the same player, while the displayed name
+stays whatever that board said.
+
+### When something looks wrong
+
+The menu footer states the sync result and shows the error if one occurred. In a
+console, `window.__nfa` reports the sync state, which source each season came
+from, and `window.__nfa.resync()` forces a refetch.
 
 ## Deploying
 

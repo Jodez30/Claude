@@ -6,19 +6,23 @@ no build step, no dependencies, no login. Share the link, open it on a phone.
 **Tabs:** Keeper Calculator · Draft History, with a global 2024 / 2025 / 2026 season selector.
 Team roster / live roster view is a later phase and isn't built yet.
 
-## Status: needs three things before it shows real data
+## Data status
 
-The app is complete and working, but it will not invent draft results. Until these
-land, each season shows a plain "here's what's missing" panel instead of picks:
+| Season | Source | State |
+| --- | --- | --- |
+| 2026 | Sleeper API, league `1399177243342667776` | Live |
+| 2025 | ESPN recap, hand-entered | 180 picks, 15 rounds × 12 teams |
+| 2024 | ESPN recap, hand-entered | 180 picks, 15 rounds × 12 teams |
 
-| Needed | Where it goes |
-| --- | --- |
-| 2026 Sleeper league ID | `sleeperLeagueId` in `config.js` |
-| 2024 draft board | `seasons[2024].picks` in `data/drafts.js` |
-| 2025 draft board | `seasons[2025].picks` in `data/drafts.js` |
+No draft data is invented anywhere. A season with nothing loaded renders a panel
+saying what's missing, and a failed Sleeper fetch shows the error with a retry
+rather than falling back to placeholders.
 
-The keeper calculator works right now regardless — enter a round by hand and it
-computes the cost. Player search is what needs the draft boards.
+The 2024 and 2025 NFL club abbreviations are recorded as ESPN displayed them on
+its recap page, which shows each player's *current* club rather than the one they
+were on that season — so a few look wrong for the year (Aaron Rodgers as `FA` on
+the 2024 board). Round, pick and fantasy team are what keeper math runs on; the
+club is only there to tell players apart.
 
 ## Files
 
@@ -48,8 +52,15 @@ are entered by hand. Paste rows into `data/drafts.js` and flip `complete` to `tr
 }
 ```
 
-`overall` is optional. Snake order doesn't matter — the board renders from the
-round and pick numbers as entered.
+`overall` is optional — it's derived from the round and pick numbers, so rows can
+be pasted in any order.
+
+Player names are matched across sources on a stripped-down form (case, periods,
+apostrophes and generational suffixes removed), because ESPN and Sleeper don't
+agree on spelling: `James Cook` in 2024 became `James Cook III` in 2025, and
+`Deebo Samuel` became `Deebo Samuel Sr.` Without that, a kept player would split
+into two entries and the calculator would lose their draft history — exactly the
+thing it needs. The most recent season's spelling is the one displayed.
 
 ## Keeper rules as implemented
 

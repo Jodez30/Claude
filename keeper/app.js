@@ -98,8 +98,13 @@
       };
       return;
     }
+    /* Derive the overall pick number from round/pick so the board sorts right
+       even if rows get pasted in out of order. */
+    var perRound = raw.picks.reduce(function (max, p) { return Math.max(max, p.pick || 0); }, 0);
     var picks = raw.picks.map(function (p, i) {
-      return Object.assign({}, p, { overall: p.overall != null ? p.overall : i + 1 });
+      var overall = p.overall;
+      if (overall == null) overall = perRound ? (p.round - 1) * perRound + p.pick : i + 1;
+      return Object.assign({}, p, { overall: overall });
     });
     state.seasons[season] = {
       status: 'ready', source: 'manual', picks: picks, rounds: raw.rounds || null
@@ -162,29 +167,42 @@
 
   var playerIndex = [];
 
+  /* Sources disagree on how a player's name is written — ESPN added generational
+     suffixes between 2024 and 2025 (James Cook vs James Cook III, Deebo Samuel vs
+     Deebo Samuel Sr.), and Sleeper punctuates differently again. Matching on a
+     stripped-down form keeps one player from splitting into several entries,
+     which would hide exactly the draft history the calculator needs. */
+  function nameKey(name) {
+    return String(name || '')
+      .toLowerCase()
+      .replace(/[.'’]/g, '')
+      .replace(/\s+(jr|sr|ii|iii|iv|v)$/, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
   function buildPlayerIndex() {
     var byKey = {};
     CONFIG.seasons.forEach(function (season) {
       var data = state.seasons[season];
       if (!data || data.status !== 'ready') return;
       data.picks.forEach(function (pick) {
-        var key = (pick.player || '').toLowerCase().trim() + '|' + (pick.position || '');
-        if (!key.trim()) return;
-        if (!byKey[key]) {
-          byKey[key] = {
-            key: key, name: pick.player, position: pick.position,
-            nflTeam: pick.nflTeam, seasons: []
-          };
-        }
-        byKey[key].nflTeam = pick.nflTeam || byKey[key].nflTeam;
+        var key = nameKey(pick.player) + '|' + (pick.position || '');
+        if (key.charAt(0) === '|') return;
+        if (!byKey[key]) byKey[key] = { key: key, position: pick.position, seasons: [] };
         byKey[key].seasons.push({
-          season: season, round: pick.round, pick: pick.pick, fantasyTeam: pick.fantasyTeam
+          season: season, round: pick.round, pick: pick.pick,
+          fantasyTeam: pick.fantasyTeam, name: pick.player, nflTeam: pick.nflTeam
         });
       });
     });
     playerIndex = Object.keys(byKey).map(function (k) {
-      byKey[k].seasons.sort(function (a, b) { return b.season - a.season; });
-      return byKey[k];
+      var entry = byKey[k];
+      entry.seasons.sort(function (a, b) { return b.season - a.season; });
+      /* Show the most recent season's spelling and club. */
+      entry.name = entry.seasons[0].name;
+      entry.nflTeam = entry.seasons[0].nflTeam;
+      return entry;
     });
     playerIndex.sort(function (a, b) { return a.name.localeCompare(b.name); });
   }

@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Keeper Hub" />
+  <meta name="theme-color" content="#0A0E13" />
+  <meta name="description" content="Keeper cost calculator and draft history for our fantasy football keeper league." />
+  <title>Keeper Hub</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230A0E13'/%3E%3Ctext x='16' y='23' font-size='20' text-anchor='middle'%3E%F0%9F%8F%88%3C/text%3E%3C/svg%3E" />
+  <style>
+    :root {
+      --bg:        #0A0E13;
+      --surface:   #141A21;
+      --surface-2: #1B232C;
+      --line:      #26313D;
+      --text:      #E8EDF2;
+      --muted:     #8A97A6;
+      --accent:    #4ADE80;
+      --accent-dk: #22C55E;
+      --warn:      #FBBF24;
+      --danger:    #F87171;
+      --info:      #60A5FA;
+      --safe-top:  env(safe-area-inset-top, 0px);
+      --safe-bot:  env(safe-area-inset-bottom, 0px);
+      color-scheme: dark;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+    /* Beats the display rules below, which would otherwise override [hidden]. */
+    [hidden] { display: none !important; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100dvh;
+      overflow-x: hidden;
+      -webkit-text-size-adjust: 100%;
+    }
+
+    /* ── Header ── */
+    .header {
+      position: sticky;
+      top: 0; z-index: 50;
+      background: rgba(10, 14, 19, 0.88);
+      backdrop-filter: saturate(180%) blur(20px);
+      -webkit-backdrop-filter: saturate(180%) blur(20px);
+      border-bottom: 1px solid var(--line);
+      padding: calc(var(--safe-top) + 12px) 16px 10px;
+    }
+    .header-top { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+    .header-title { font-size: 1.25rem; font-weight: 700; letter-spacing: -0.4px; }
+    .header-title span { color: var(--accent); }
+    .header-sub { font-size: 0.72rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    /* ── Segmented year control ── */
+    .segmented {
+      display: flex; gap: 4px; margin-top: 10px;
+      background: var(--surface); border: 1px solid var(--line);
+      border-radius: 10px; padding: 3px;
+    }
+    .segmented button {
+      flex: 1; appearance: none; border: none; background: transparent;
+      color: var(--muted); font: inherit; font-size: 0.86rem; font-weight: 600;
+      padding: 8px 4px; border-radius: 8px; cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+    }
+    .segmented button[aria-selected="true"] { background: var(--accent); color: #07120B; }
+
+    /* ── Layout ── */
+    main { padding: 16px 16px calc(var(--safe-bot) + 88px); max-width: 720px; margin: 0 auto; }
+    .panel[hidden] { display: none; }
+
+    .card {
+      background: var(--surface); border: 1px solid var(--line);
+      border-radius: 14px; padding: 14px; margin-bottom: 14px;
+    }
+    .card-label {
+      font-size: 0.7rem; font-weight: 700; letter-spacing: 0.08em;
+      text-transform: uppercase; color: var(--muted); margin-bottom: 10px;
+    }
+
+    label.field { display: block; margin-bottom: 12px; }
+    label.field > span { display: block; font-size: 0.78rem; color: var(--muted); margin-bottom: 6px; }
+
+    input[type="text"], input[type="number"], input[type="search"], select {
+      width: 100%; appearance: none;
+      background: var(--surface-2); border: 1px solid var(--line);
+      color: var(--text); font: inherit; font-size: 1rem; /* 16px keeps iOS from zooming */
+      padding: 11px 12px; border-radius: 10px;
+    }
+    input:focus, select:focus { outline: 2px solid var(--accent-dk); outline-offset: -1px; }
+    select {
+      background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8'><path d='M1 1l5 5 5-5' stroke='%238A97A6' stroke-width='2' fill='none' stroke-linecap='round'/></svg>");
+      background-repeat: no-repeat; background-position: right 12px center; padding-right: 34px;
+    }
+
+    /* ── Choice chips (acquisition, keeper season) ── */
+    .choices { display: flex; gap: 8px; }
+    .choices button {
+      flex: 1; appearance: none; font: inherit; font-size: 0.88rem; font-weight: 600;
+      background: var(--surface-2); border: 1px solid var(--line); color: var(--muted);
+      padding: 11px 6px; border-radius: 10px; cursor: pointer;
+      transition: border-color 0.15s, color 0.15s, background 0.15s;
+    }
+    .choices button[aria-pressed="true"] {
+      border-color: var(--accent); color: var(--accent); background: rgba(74, 222, 128, 0.10);
+    }
+
+    .switch { display: flex; align-items: flex-start; gap: 10px; padding: 4px 0; }
+    .switch input { width: 20px; height: 20px; accent-color: var(--accent); flex: none; margin-top: 1px; }
+    .switch span { font-size: 0.85rem; color: var(--text); }
+    .switch small { display: block; color: var(--muted); font-size: 0.74rem; margin-top: 2px; }
+
+    /* ── Player search ── */
+    .search-wrap { position: relative; }
+    .results {
+      margin-top: 8px; border: 1px solid var(--line); border-radius: 10px;
+      overflow: hidden; max-height: 288px; overflow-y: auto; -webkit-overflow-scrolling: touch;
+    }
+    .results:empty { display: none; }
+    .result {
+      display: flex; align-items: center; gap: 10px; width: 100%;
+      background: var(--surface-2); border: none; border-bottom: 1px solid var(--line);
+      color: var(--text); font: inherit; text-align: left; padding: 11px 12px; cursor: pointer;
+    }
+    .result:last-child { border-bottom: none; }
+    .result:active { background: var(--line); }
+    .result-name { font-weight: 600; font-size: 0.94rem; }
+    .result-meta { font-size: 0.74rem; color: var(--muted); margin-top: 2px; }
+    .result-grow { flex: 1; min-width: 0; }
+    .result-round { font-size: 0.74rem; color: var(--muted); white-space: nowrap; }
+
+    .pos {
+      flex: none; font-size: 0.64rem; font-weight: 800; letter-spacing: 0.04em;
+      padding: 3px 6px; border-radius: 5px; background: var(--line); color: var(--text);
+    }
+    .pos-QB  { background: #7C3AED33; color: #C4B5FD; }
+    .pos-RB  { background: rgba(5,150,105,0.28);  color: #6EE7B7; }
+    .pos-WR  { background: rgba(37,99,235,0.28);  color: #93C5FD; }
+    .pos-TE  { background: rgba(217,119,6,0.28);  color: #FCD34D; }
+    .pos-K   { background: rgba(219,39,119,0.25); color: #F9A8D4; }
+    .pos-DEF { background: rgba(100,116,139,0.35); color: #CBD5E1; }
+
+    /* ── Selected player ── */
+    .selected { display: flex; align-items: flex-start; gap: 10px; }
+    .selected-name { font-size: 1.05rem; font-weight: 700; }
+    .selected-meta { font-size: 0.78rem; color: var(--muted); margin-top: 3px; }
+    .btn-clear {
+      appearance: none; background: transparent; border: 1px solid var(--line);
+      color: var(--muted); font: inherit; font-size: 0.76rem;
+      padding: 6px 10px; border-radius: 8px; cursor: pointer; flex: none;
+    }
+    .history-line {
+      display: flex; justify-content: space-between; gap: 10px;
+      font-size: 0.8rem; padding: 7px 0; border-top: 1px solid var(--line); color: var(--muted);
+    }
+    .history-line b { color: var(--text); font-weight: 600; }
+
+    /* ── Result readout ── */
+    .verdict { text-align: center; padding: 6px 0 2px; }
+    .verdict-cost { font-size: 3rem; font-weight: 800; letter-spacing: -2px; line-height: 1; color: var(--accent); }
+    .verdict-cost.blocked { color: var(--danger); font-size: 1.6rem; letter-spacing: -0.5px; }
+    .verdict-cap { font-size: 0.82rem; color: var(--muted); margin-top: 8px; }
+
+    .note {
+      display: flex; gap: 8px; font-size: 0.8rem; line-height: 1.45;
+      padding: 10px 12px; border-radius: 10px; margin-top: 8px;
+      background: var(--surface-2); color: var(--muted); border-left: 3px solid var(--line);
+    }
+    .note.warn   { border-left-color: var(--warn);   color: #FDE9BC; background: rgba(251,191,36,0.09); }
+    .note.danger { border-left-color: var(--danger); color: #FCD5D5; background: rgba(248,113,113,0.09); }
+    .note.info   { border-left-color: var(--info);   color: #CFE2FE; background: rgba(96,165,250,0.09); }
+
+    /* ── Ladder ── */
+    .ladder { width: 100%; border-collapse: collapse; font-size: 0.84rem; margin-top: 4px; }
+    .ladder th {
+      text-align: left; font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.07em;
+      color: var(--muted); font-weight: 700; padding: 6px 8px; border-bottom: 1px solid var(--line);
+    }
+    .ladder td { padding: 9px 8px; border-bottom: 1px solid var(--line); }
+    .ladder tr:last-child td { border-bottom: none; }
+    .ladder tr[data-current="true"] { background: rgba(74,222,128,0.08); }
+    .ladder .cost { font-weight: 700; }
+    .ladder .out { color: var(--danger); }
+
+    /* ── Draft board ── */
+    .table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; margin: 0 -14px; padding: 0 14px; }
+    .board { width: 100%; border-collapse: collapse; font-size: 0.84rem; }
+    .board th {
+      position: sticky; top: 0; background: var(--surface); z-index: 1;
+      text-align: left; font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.06em;
+      color: var(--muted); font-weight: 700; padding: 8px 6px; border-bottom: 1px solid var(--line);
+      white-space: nowrap; cursor: pointer; user-select: none;
+    }
+    .board th[aria-sort="ascending"]::after  { content: " ▲"; color: var(--accent); }
+    .board th[aria-sort="descending"]::after { content: " ▼"; color: var(--accent); }
+    .board td { padding: 9px 6px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+    .board tr:last-child td { border-bottom: none; }
+    .board .cell-pick { color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .board .cell-player { font-weight: 600; }
+    .board .cell-nfl { color: var(--muted); font-size: 0.78rem; white-space: nowrap; }
+    .board .cell-team { color: var(--muted); font-size: 0.78rem; }
+    .round-head td {
+      background: var(--surface-2); font-size: 0.68rem; font-weight: 700;
+      letter-spacing: 0.07em; text-transform: uppercase; color: var(--muted); padding: 6px;
+    }
+
+    .empty { text-align: center; padding: 26px 14px; }
+    .empty-icon { font-size: 1.8rem; }
+    .empty-title { font-weight: 700; margin: 8px 0 6px; }
+    .empty-body { font-size: 0.85rem; color: var(--muted); line-height: 1.5; }
+    .empty-body code {
+      background: var(--surface-2); padding: 1px 5px; border-radius: 4px;
+      font-size: 0.8rem; color: var(--accent);
+    }
+
+    .btn {
+      appearance: none; width: 100%; font: inherit; font-size: 0.9rem; font-weight: 600;
+      background: var(--surface-2); border: 1px solid var(--line); color: var(--text);
+      padding: 11px; border-radius: 10px; cursor: pointer; margin-top: 6px;
+    }
+    .btn:active { background: var(--line); }
+
+    details.rules { border-top: 1px solid var(--line); margin-top: 4px; padding-top: 10px; }
+    details.rules summary {
+      cursor: pointer; font-size: 0.8rem; font-weight: 600; color: var(--muted); list-style: none;
+    }
+    details.rules summary::-webkit-details-marker { display: none; }
+    details.rules summary::before { content: "▸ "; color: var(--accent); }
+    details.rules[open] summary::before { content: "▾ "; }
+    details.rules ul { margin: 10px 0 0 16px; }
+    details.rules li { font-size: 0.8rem; color: var(--muted); line-height: 1.55; margin-bottom: 6px; }
+    details.rules b { color: var(--text); }
+
+    /* ── Bottom tab bar ── */
+    .tabbar {
+      position: fixed; left: 0; right: 0; bottom: 0; z-index: 50;
+      display: flex; background: rgba(10, 14, 19, 0.92);
+      backdrop-filter: saturate(180%) blur(20px);
+      -webkit-backdrop-filter: saturate(180%) blur(20px);
+      border-top: 1px solid var(--line);
+      padding-bottom: var(--safe-bot);
+    }
+    .tabbar button {
+      flex: 1; appearance: none; background: none; border: none; cursor: pointer;
+      color: var(--muted); font: inherit; font-size: 0.68rem; font-weight: 600;
+      padding: 9px 4px 8px; display: flex; flex-direction: column; align-items: center; gap: 3px;
+    }
+    .tabbar button[aria-selected="true"] { color: var(--accent); }
+    .tabbar .tab-icon { font-size: 1.15rem; line-height: 1; }
+
+    .sr-only {
+      position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+      overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+    }
+  </style>
+</head>
+<body>
+  <header class="header">
+    <div class="header-top">
+      <h1 class="header-title">Keeper <span>Hub</span></h1>
+      <div class="header-sub" id="leagueLabel">—</div>
+    </div>
+    <div class="segmented" role="tablist" aria-label="Season" id="yearSelector"></div>
+  </header>
+
+  <main>
+    <!-- ══ Keeper Calculator ══ -->
+    <section class="panel" id="panel-calculator" role="tabpanel" aria-label="Keeper calculator">
+      <div class="card">
+        <div class="card-label">1 · Find a player</div>
+        <div class="search-wrap">
+          <label class="field" style="margin-bottom:0">
+            <span class="sr-only">Search players</span>
+            <input type="search" id="playerSearch" placeholder="Search drafted players…"
+                   autocomplete="off" autocorrect="off" spellcheck="false" />
+          </label>
+          <div class="results" id="searchResults"></div>
+        </div>
+        <div id="selectedPlayer" hidden></div>
+        <div id="searchEmpty"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-label">2 · How did they get on the roster?</div>
+        <div class="choices" id="acquisitionChoice">
+          <button type="button" data-value="draft"  aria-pressed="true">Drafted</button>
+          <button type="button" data-value="waiver" aria-pressed="false">Waiver wire</button>
+        </div>
+
+        <div id="draftInputs" style="margin-top:12px">
+          <label class="field" style="margin-bottom:0">
+            <span>Original draft round</span>
+            <input type="number" id="originalRound" min="1" max="30" step="1" inputmode="numeric" placeholder="e.g. 5" />
+          </label>
+        </div>
+
+        <div id="waiverInputs" style="margin-top:12px" hidden>
+          <label class="field">
+            <span>ADP round in the upcoming draft</span>
+            <input type="number" id="adpRound" min="1" max="30" step="1" inputmode="numeric" placeholder="e.g. 2" />
+          </label>
+          <label class="field" id="draftRoundsField" hidden>
+            <span>Rounds in the upcoming draft <em style="color:var(--warn);font-style:normal">— needed for the ADP cap</em></span>
+            <input type="number" id="draftRoundsInput" min="1" max="30" step="1" inputmode="numeric" placeholder="e.g. 15" />
+          </label>
+          <label class="switch">
+            <input type="checkbox" id="waiverWeeks" />
+            <span>Rostered 3+ consecutive active weeks
+              <small>Required for waiver keeper eligibility. Doesn't have to have started.</small></span>
+          </label>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-label">3 · Which keeper season is this?</div>
+        <div class="choices" id="keeperSeasonChoice">
+          <button type="button" data-value="1" aria-pressed="true">1st season kept</button>
+          <button type="button" data-value="2" aria-pressed="false">2nd season kept</button>
+        </div>
+        <label class="switch" style="margin-top:12px">
+          <input type="checkbox" id="injuryException" />
+          <span>Injury exception confirmed for a prior season
+            <small>Only tick this once the commissioner has confirmed injury (not bench or waiver) and the player sat in the IR slot.</small></span>
+        </label>
+      </div>
+
+      <div class="card">
+        <div class="card-label">Keeper cost</div>
+        <div class="verdict">
+          <div class="verdict-cost" id="verdictCost">—</div>
+          <div class="verdict-cap" id="verdictCap">Pick a player or enter a round.</div>
+        </div>
+        <div id="verdictNotes"></div>
+        <table class="ladder" id="ladder" hidden>
+          <thead>
+            <tr><th>Season</th><th>Status</th><th>Cost</th></tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+        <details class="rules">
+          <summary>League keeper rules</summary>
+          <ul>
+            <li><b>2 keepers</b> per team, max, from last season's roster.</li>
+            <li><b>3 seasons</b> on a roster, max — the year they were acquired counts as season 1. That means a player can be kept twice, then returns to the pool.</li>
+            <li><b>Rounds 1–2 originals</b> always cost a 1st to keep, every season, no exceptions.</li>
+            <li><b>Everyone else:</b> first keeper season costs the original round − 1; second costs that − 2. Drafted in the 5th → 4th → 2nd → pool.</li>
+            <li><b>Waiver pickups (OBJ Rule):</b> cost is one round later than the player's ADP round. ADP of the 10th or later is capped at the final round. Must have been rostered 3+ consecutive active weeks.</li>
+            <li><b>Injury exception:</b> a season where a rostered player scored in 3 or fewer games due to injury doesn't count toward the 3-season cap. Must be kept in the IR slot, and must be confirmed manually — the app only flags candidates.</li>
+          </ul>
+        </details>
+      </div>
+    </section>
+
+    <!-- ══ Draft History ══ -->
+    <section class="panel" id="panel-history" role="tabpanel" aria-label="Draft history" hidden>
+      <div class="card">
+        <label class="field" style="margin-bottom:0">
+          <span>Team</span>
+          <select id="teamFilter"><option value="">All teams</option></select>
+        </label>
+      </div>
+      <div class="card" id="boardCard">
+        <div class="card-label" id="boardLabel">Draft board</div>
+        <div id="boardContent"></div>
+      </div>
+    </section>
+  </main>
+
+  <nav class="tabbar" role="tablist" aria-label="Sections">
+    <button type="button" data-tab="calculator" aria-selected="true">
+      <span class="tab-icon" aria-hidden="true">🧮</span>Keeper Calculator
+    </button>
+    <button type="button" data-tab="history" aria-selected="false">
+      <span class="tab-icon" aria-hidden="true">📋</span>Draft History
+    </button>
+  </nav>
+
+  <script src="config.js"></script>
+  <script src="rules.js"></script>
+  <script src="data/drafts.js"></script>
+  <script src="sleeper.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

@@ -542,7 +542,8 @@
     var data = state.seasons[state.season];
     var name = (data && data.leagueName) || CONFIG.leagueName;
     var rounds = draftRoundsFor(state.season);
-    el.leagueLabel.textContent = name + (rounds ? ' · ' + rounds + ' rounds' : '');
+    /* Abbreviated — this sits on one line beside the title on a phone. */
+    el.leagueLabel.textContent = name + (rounds ? ' · ' + rounds + ' rds' : '');
   }
 
   function render() {

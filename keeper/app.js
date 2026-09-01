@@ -1,5 +1,5 @@
 /* ──────────────────────────────────────────────────────────────
-   Keeper Hub — UI wiring.
+   No Fun Allowed — UI wiring.
    Reads config.js, data/drafts.js and the Sleeper API, and drives the
    two tabs. No framework, no build step; everything runs from the file.
    ────────────────────────────────────────────────────────────── */
@@ -9,7 +9,7 @@
   var CONFIG = window.LEAGUE_CONFIG;
   var RULES = window.KeeperRules;
   var MANUAL = (window.KEEPER_DATA && window.KEEPER_DATA.seasons) || {};
-  var ROUNDS_OVERRIDE_KEY = 'keeperhub.draftRounds';
+  var ROUNDS_OVERRIDE_KEY = 'nofunallowed.draftRounds';
 
   var state = {
     season: CONFIG.defaultSeason,

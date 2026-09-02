@@ -3,8 +3,9 @@
 Mobile-first hub for our 12-team fantasy football keeper league. Static HTML/CSS/JS —
 no build step, no dependencies, no login. Share the link, open it on a phone.
 
-**Tabs:** Keeper Calculator · Draft History, with a global 2024 / 2025 / 2026 season selector.
-Team roster / live roster view is a later phase and isn't built yet.
+**Tabs:** Keeper Calculator · Draft History. The 2024 / 2025 / 2026 season plates belong
+to Draft History only — the calculator prices a player for the upcoming draft and is
+single-year. Team roster / live roster view is a later phase and isn't built yet.
 
 ## Data status
 
@@ -32,6 +33,7 @@ club is only there to tell players apart.
 | `app.js` | UI wiring: tabs, search, draft board, empty states |
 | `rules.js` | The keeper rules engine — pure functions, no DOM |
 | `sleeper.js` | Sleeper API client for the live 2026 draft |
+| `teams.js` | Franchise name history and NFL club colours |
 | `diagnostics.html` | Runs each Sleeper call from the viewer's browser and reports which one fails |
 | `config.js` | League ID, seasons, draft-round counts |
 | `data/drafts.js` | Hand-entered 2024 / 2025 boards (pre-Sleeper) |
@@ -63,6 +65,37 @@ agree on spelling: `James Cook` in 2024 became `James Cook III` in 2025, and
 into two entries and the calculator would lose their draft history — exactly the
 thing it needs. The most recent season's spelling is the one displayed.
 
+## Team names
+
+Managers rename their team most years, so one franchise reads as three different
+names across the three boards. **Every board shows the current (2026) name**, so a
+team is recognisable at a glance and can be followed across seasons.
+
+`data/drafts.js` is left alone — it stays the record of what a team was actually
+called that year. The swap happens at load, and the historical name is kept on each
+pick as `fantasyTeamHistorical`. Matching ignores case, spacing, punctuation and
+emoji, because the boards were transcribed from screenshots where emoji didn't
+always survive (`Da Bears💅` and `Da Bears` are the same franchise). A name with no
+mapping is left as-is and logged with `console.warn` rather than silently showing
+something stale.
+
+The table lives in `teams.js`. When someone renames again, add the new name there.
+
+## NFL club colours
+
+Draft picks carry the club's primary colour from the official palettes, keyed off
+the `NFL` column. Text on each chip is white or near-black, chosen by WCAG relative
+luminance, so the light primaries (Steelers gold, Saints gold) stay readable
+alongside the near-black ones (Raiders, Jaguars, Bears, Browns). Every chip carries
+a faint outline, since several primaries are darker than the page itself.
+
+Two pairs genuinely share a primary — Denver and Cincinnati on `#FB4F14`, Dallas and
+the Rams on `#003594`. Those four carry a 3px stripe of their Color 2 along the
+bottom so they stay tellable apart. ESPN and Sleeper spell some clubs differently
+(`Wsh` vs `WAS`, `JAC` vs `JAX`), so abbreviations are normalised through an alias
+table. Anything that isn't a club — `FA` for a free agent — gets a neutral outline
+chip rather than a colour.
+
 ## Keeper rules as implemented
 
 The rules document's prose ("one round *higher*") contradicts its own worked
@@ -78,11 +111,21 @@ is consistent across all three seasons.
 - **Waiver pickups (OBJ Rule):** one round later than the player's ADP round;
   an ADP of the 10th or later is capped at the final round. Must have been
   rostered 3+ consecutive active weeks.
+
+  The calculator shows this as static text rather than computing it. The boards
+  only record drafted players, and nothing in them says how a player joined a
+  roster — that needs the Sleeper feed, which isn't reporting yet. Once it is,
+  this should switch to detecting the acquisition type and pricing it.
 - **Injury exception:** a season where a rostered player scored in ≤3 games due to
   injury doesn't count toward the cap, and must be kept in the IR slot. The app
   only ever *flags* this — it is never applied automatically, because stats can
   tell you a player didn't score but not whether the cause was injury, a bench, or
-  a waiver.
+  a waiver. `rules.js` supports it; the UI shows it as static guidance.
+
+Nothing on a board records whether a player was **kept** — ESPN never captured it
+and the Sleeper feed is down — so the calculator doesn't ask which keeper season a
+player is in. It leads with the first-time cost and shows the whole ladder
+underneath, which is the honest answer given what the data knows.
 
 Three points the rules document leaves genuinely ambiguous, and the reading used here:
 

@@ -9,25 +9,22 @@
   var CONFIG = window.LEAGUE_CONFIG;
   var RULES = window.KeeperRules;
   var MANUAL = (window.KEEPER_DATA && window.KEEPER_DATA.seasons) || {};
-  var ROUNDS_OVERRIDE_KEY = 'nofunallowed.draftRounds';
 
   var state = {
+    /* Only the Draft History tab is season-scoped; the calculator prices a
+       player for the upcoming draft and has no year selector. */
     season: CONFIG.defaultSeason,
     tab: 'calculator',
     /* season → { status:'loading'|'ready'|'empty'|'error'|'unconfigured', ... } */
     seasons: {},
     selected: null,
-    acquisition: 'draft',
-    keeperSeason: 1,
     sort: { key: 'overall', dir: 'asc' },
     teamFilter: ''
   };
 
   var el = {};
   ['leagueLabel', 'yearSelector', 'playerSearch', 'searchResults', 'searchEmpty', 'selectedPlayer',
-   'acquisitionChoice', 'draftInputs', 'waiverInputs', 'originalRound', 'adpRound', 'waiverWeeks',
-   'draftRoundsField', 'draftRoundsInput', 'keeperSeasonChoice', 'injuryException', 'verdictCost',
-   'verdictCap', 'verdictNotes', 'ladder', 'teamFilter', 'boardLabel', 'boardContent'
+   'verdictCost', 'verdictCap', 'verdictNotes', 'ladder', 'teamFilter', 'boardLabel', 'boardContent'
   ].forEach(function (id) { el[id] = document.getElementById(id); });
 
   /* ── helpers ───────────────────────────────────────────────── */
@@ -52,6 +49,22 @@
 
   function note(kind, text) { return h('div', { class: 'note ' + kind, text: text }); }
 
+  /* NFL club chip, painted in that club's primary. Returns a neutral chip
+     for anything that isn't a club — "FA" for a free agent, mainly. */
+  function nflChip(abbr) {
+    var style = window.Teams.clubStyle(abbr);
+    if (!style) {
+      return h('span', { class: 'nfl-chip nfl-chip-none', text: abbr || '—' });
+    }
+    var chip = h('span', { class: 'nfl-chip', text: style.code });
+    chip.style.backgroundColor = style.background;
+    chip.style.color = style.color;
+    /* Denver/Cincinnati and Dallas/the Rams genuinely share a primary, so
+       those four carry their Color 2 along the bottom to stay tellable apart. */
+    if (style.stripe) chip.style.borderBottom = '3px solid ' + style.stripe;
+    return chip;
+  }
+
   function emptyState(icon, title, bodyHtml, action) {
     var box = h('div', { class: 'empty' }, [
       h('div', { class: 'empty-icon', text: icon }),
@@ -75,12 +88,16 @@
     return null;
   }
 
-  /* …falling back to a count the user typed in when nothing else knows it. */
-  function draftRoundsFor(season) {
-    var known = draftRoundsFromData(season);
-    if (known) return known;
-    var override = Number(localStorage.getItem(ROUNDS_OVERRIDE_KEY + '.' + season));
-    return override > 0 ? override : null;
+  /* Rounds in the draft the calculator is pricing for. Prefers the current
+     season, then falls back to the most recent board that knows — the count
+     only shifts if the league changes its draft length. */
+  function upcomingDraftRounds() {
+    var seasons = CONFIG.seasons.slice().sort(function (a, b) { return b - a; });
+    for (var i = 0; i < seasons.length; i++) {
+      var rounds = draftRoundsFromData(seasons[i]);
+      if (rounds) return rounds;
+    }
+    return null;
   }
 
   /* ── data loading ──────────────────────────────────────────── */
@@ -106,6 +123,23 @@
       if (overall == null) overall = perRound ? (p.round - 1) * perRound + p.pick : i + 1;
       return Object.assign({}, p, { overall: overall });
     });
+    /* Every board shows the franchise's CURRENT name, so a team is
+       recognisable across seasons. The historical name is kept alongside
+       rather than thrown away. */
+    var unmapped = [];
+    picks = picks.map(function (pick) {
+      var current = window.Teams.currentName(season, pick.fantasyTeam);
+      if (!current && unmapped.indexOf(pick.fantasyTeam) === -1) unmapped.push(pick.fantasyTeam);
+      return Object.assign({}, pick, {
+        fantasyTeam: current || pick.fantasyTeam,
+        fantasyTeamHistorical: pick.fantasyTeam
+      });
+    });
+    if (unmapped.length) {
+      /* Loud rather than silently showing a stale name. */
+      console.warn('No 2026 name mapped for ' + season + ' team(s): ' + unmapped.join(', '));
+    }
+
     state.seasons[season] = {
       status: 'ready', source: 'manual', picks: picks, rounds: raw.rounds || null
     };
@@ -265,19 +299,11 @@
   function selectPlayer(player) {
     state.selected = player;
     el.playerSearch.value = '';
-    /* Prefill from the season on screen if the player was drafted that year,
-       otherwise from their most recent draft. */
-    var forSeason = player.seasons.filter(function (s) { return s.season === state.season; })[0];
-    var source = forSeason || player.seasons[0];
-    if (source) el.originalRound.value = source.round;
-    state.acquisition = 'draft';
-    syncChoiceGroup(el.acquisitionChoice, 'draft');
     render();
   }
 
   function clearPlayer() {
     state.selected = null;
-    el.originalRound.value = '';
     render();
   }
 
@@ -294,7 +320,7 @@
       posBadge(player.position),
       h('div', { class: 'result-grow' }, [
         h('div', { class: 'selected-name', text: player.name }),
-        h('div', { class: 'selected-meta', text: player.nflTeam })
+        h('div', { class: 'selected-meta' }, [nflChip(player.nflTeam)])
       ]),
       clearBtn
     ]));
@@ -309,73 +335,69 @@
     el.selectedPlayer.appendChild(history);
   }
 
-  function calculatorInput() {
-    var rounds = draftRoundsFor(state.season);
+  /* The boards say what round a player went in; nothing in them says whether
+     he was then KEPT. ESPN never recorded it and the Sleeper feed is down, so
+     rather than ask the reader to pick a keeper season, the whole ladder is
+     shown and the headline is the first-time cost. */
+  function calculatorInput(keeperSeason) {
+    var player = state.selected;
+    var source = player && player.seasons[0];
     return {
-      acquisition: state.acquisition,
-      originalRound: Number(el.originalRound.value) || null,
-      adpRound: Number(el.adpRound.value) || null,
-      keeperSeason: state.keeperSeason,
-      draftRounds: rounds,
-      injuryExemptSeasons: el.injuryException.checked ? 1 : 0,
-      waiverWeeksRosteredMet: state.acquisition === 'waiver' ? (el.waiverWeeks.checked || null) : undefined
+      acquisition: 'draft',
+      originalRound: source ? source.round : null,
+      keeperSeason: keeperSeason || 1,
+      draftRounds: upcomingDraftRounds(),
+      injuryExemptSeasons: 0
     };
   }
 
   function renderVerdict() {
-    var input = calculatorInput();
-    var result = RULES.computeKeeperCost(input);
-
     clear(el.verdictNotes);
 
-    if (result.incomplete) {
+    if (!state.selected) {
       el.verdictCost.textContent = '—';
       el.verdictCost.className = 'verdict-cost';
-      el.verdictCap.textContent = result.reason;
+      el.verdictCap.textContent = 'Search for a player above';
       el.ladder.hidden = true;
       return;
     }
 
+    var input = calculatorInput(1);
+    var result = RULES.computeKeeperCost(input);
+    var source = state.selected.seasons[0];
+
     if (!result.eligible) {
       el.verdictCost.textContent = 'Not eligible';
       el.verdictCost.className = 'verdict-cost blocked';
-      el.verdictCap.textContent = 'Back to the general draft pool.';
+      el.verdictCap.textContent = 'Back to the general draft pool';
       el.verdictNotes.appendChild(note('danger', result.reason));
     } else {
       el.verdictCost.textContent = result.costLabel;
       el.verdictCost.className = 'verdict-cost';
-      el.verdictCap.textContent = 'round pick · season ' + result.seasonsUsed + ' of ' +
-        RULES.MAX_SEASONS_ON_ROSTER + ' on the roster';
-      if (result.isFinalSeason) {
-        el.verdictNotes.appendChild(note('warn',
-          'Final keeper season. After this year the player hits the 3-season cap and returns to the draft pool.'));
-      }
+      el.verdictCap.textContent = 'round pick · first season kept';
+      result.notes.forEach(function (text) { el.verdictNotes.appendChild(note('info', text)); });
     }
 
-    result.notes.forEach(function (text) { el.verdictNotes.appendChild(note('info', text)); });
+    el.verdictNotes.appendChild(note('info',
+      'Based on ' + state.selected.name + ' going in round ' + source.round +
+      ' of the ' + source.season + ' draft. If he has already been kept once, ' +
+      'read the second row of the ladder instead.'));
 
-    /* Injury exception is only ever nominated, never applied on its own. */
-    if ((result.isFinalSeason || !result.eligible) && !el.injuryException.checked) {
-      el.verdictNotes.appendChild(note('warn',
-        'If this player was rostered all season but played or scored in 3 games or fewer because of ' +
-        'injury, that season may not count toward the cap. Confirm with the commissioner before ' +
-        'applying it — it is never applied automatically.'));
-    }
-
-    renderLadder(input, result);
+    renderLadder();
   }
 
-  function renderLadder(input, current) {
+  function renderLadder() {
     var body = el.ladder.querySelector('tbody');
     clear(body);
-    if (current.incomplete) { el.ladder.hidden = true; return; }
+    if (!state.selected) { el.ladder.hidden = true; return; }
     el.ladder.hidden = false;
 
-    RULES.costLadder(input).forEach(function (row) {
-      var isCurrent = row.keeperSeason === input.keeperSeason;
+    RULES.costLadder(calculatorInput(1)).forEach(function (row) {
       var eligible = row.result.eligible;
-      body.appendChild(h('tr', { 'data-current': isCurrent ? 'true' : 'false' }, [
-        h('td', { text: row.keeperSeason === 1 ? '1st kept' : row.keeperSeason + (row.keeperSeason === 2 ? 'nd kept' : 'rd kept') }),
+      var label = row.keeperSeason === 1 ? '1st kept'
+                : row.keeperSeason === 2 ? '2nd kept' : '3rd kept';
+      body.appendChild(h('tr', {}, [
+        h('td', { text: label }),
         h('td', {
           class: eligible ? '' : 'out',
           text: eligible ? (row.result.isFinalSeason ? 'Final season' : 'Keepable') : 'Back to pool'
@@ -386,15 +408,6 @@
   }
 
   function renderCalculator() {
-    el.draftInputs.hidden = state.acquisition !== 'draft';
-    el.waiverInputs.hidden = state.acquisition !== 'waiver';
-
-    /* Only ask for the draft-round count when we genuinely don't know it. */
-    el.draftRoundsField.hidden = !(state.acquisition === 'waiver' && !draftRoundsFromData(state.season));
-    if (!el.draftRoundsField.hidden) {
-      el.draftRoundsInput.value = localStorage.getItem(ROUNDS_OVERRIDE_KEY + '.' + state.season) || '';
-    }
-
     renderSearch();
     renderSelected();
     renderVerdict();
@@ -427,7 +440,7 @@
     { key: 'overall', label: 'Pick', cell: function (p) { return h('td', { class: 'cell-pick', text: p.round + '.' + String(p.pick).padStart(2, '0') }); } },
     { key: 'player',  label: 'Player', cell: function (p) { return h('td', { class: 'cell-player', text: p.player }); } },
     { key: 'position', label: 'Pos', cell: function (p) { return h('td', {}, [posBadge(p.position)]); } },
-    { key: 'nflTeam', label: 'NFL', cell: function (p) { return h('td', { class: 'cell-nfl', text: p.nflTeam }); } },
+    { key: 'nflTeam', label: 'NFL', cell: function (p) { return h('td', { class: 'cell-nfl' }, [nflChip(p.nflTeam)]); } },
     { key: 'fantasyTeam', label: 'Team', cell: function (p) { return h('td', { class: 'cell-team', text: p.fantasyTeam }); } }
   ];
 
@@ -528,12 +541,6 @@
 
   /* ── chrome ────────────────────────────────────────────────── */
 
-  function syncChoiceGroup(group, value) {
-    Array.prototype.forEach.call(group.querySelectorAll('button'), function (b) {
-      b.setAttribute('aria-pressed', String(b.dataset.value === String(value)));
-    });
-  }
-
   function renderYearSelector() {
     clear(el.yearSelector);
     CONFIG.seasons.slice().sort().forEach(function (season) {
@@ -552,7 +559,7 @@
   function renderLeagueLabel() {
     var data = state.seasons[state.season];
     var name = (data && data.leagueName) || CONFIG.leagueName;
-    var rounds = draftRoundsFor(state.season);
+    var rounds = state.tab === 'history' ? draftRoundsFromData(state.season) : upcomingDraftRounds();
     /* Abbreviated — this sits on one line beside the title on a phone. */
     el.leagueLabel.textContent = name + (rounds ? ' · ' + rounds + ' rds' : '');
   }
@@ -560,6 +567,11 @@
   function render() {
     renderYearSelector();
     renderLeagueLabel();
+    /* The calculator is single-year, so the season plates only belong to
+       Draft History. The header keeps its own padding when they're gone. */
+    var seasonsHidden = state.tab !== 'history';
+    el.yearSelector.hidden = seasonsHidden;
+    document.querySelector('.header').classList.toggle('no-seasons', seasonsHidden);
     document.getElementById('panel-calculator').hidden = state.tab !== 'calculator';
     document.getElementById('panel-history').hidden = state.tab !== 'history';
     if (state.tab === 'calculator') renderCalculator();
@@ -579,39 +591,9 @@
     });
   });
 
-  el.acquisitionChoice.addEventListener('click', function (event) {
-    var button = event.target.closest('button');
-    if (!button) return;
-    state.acquisition = button.dataset.value;
-    syncChoiceGroup(el.acquisitionChoice, state.acquisition);
-    render();
-  });
-
-  el.keeperSeasonChoice.addEventListener('click', function (event) {
-    var button = event.target.closest('button');
-    if (!button) return;
-    state.keeperSeason = Number(button.dataset.value);
-    syncChoiceGroup(el.keeperSeasonChoice, state.keeperSeason);
-    render();
-  });
-
   el.playerSearch.addEventListener('input', function () {
     if (state.selected) state.selected = null;
     renderCalculator();
-  });
-
-  ['originalRound', 'adpRound'].forEach(function (id) {
-    el[id].addEventListener('input', renderVerdict);
-  });
-  ['waiverWeeks', 'injuryException'].forEach(function (id) {
-    el[id].addEventListener('change', renderVerdict);
-  });
-
-  el.draftRoundsInput.addEventListener('input', function () {
-    var value = Number(el.draftRoundsInput.value);
-    if (value > 0) localStorage.setItem(ROUNDS_OVERRIDE_KEY + '.' + state.season, String(value));
-    renderLeagueLabel();
-    renderVerdict();
   });
 
   el.teamFilter.addEventListener('change', function () {

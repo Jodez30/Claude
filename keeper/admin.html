@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#050B14" />
+  <meta name="robots" content="noindex, nofollow" />
+  <title>Admin · No Fun Allowed</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23050B14'/%3E%3Ctext x='16' y='23' font-size='20' text-anchor='middle'%3E%F0%9F%9B%A0%3C/text%3E%3C/svg%3E" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600;700&display=swap" />
+  <style>
+    :root {
+      --bg: #050B14; --surface: #0D1B2C; --surface-2: #14263C; --line: #22405E;
+      --line-soft: #1A3048; --text: #F2F7FC; --muted: #8CA5BF; --chrome: #D9E4EF;
+      --red: #D50A0A; --gold: #FFC629; --green: #37D67A; --danger: #FF5A5A; --blue: #4E9BFF;
+      --safe-top: env(safe-area-inset-top, 0px); --safe-bot: env(safe-area-inset-bottom, 0px);
+      --cond: "Barlow Condensed", "Arial Narrow", -apple-system, sans-serif;
+      --sans: "Barlow", -apple-system, BlinkMacSystemFont, sans-serif;
+      color-scheme: dark;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    [hidden] { display: none !important; }
+    body {
+      background: var(--bg); color: var(--text); min-height: 100dvh; font-family: var(--sans);
+      padding: calc(var(--safe-top) + 16px) 14px calc(var(--safe-bot) + 28px);
+      -webkit-text-size-adjust: 100%;
+    }
+    main { max-width: 760px; margin: 0 auto; }
+
+    .top { border-bottom: 1px solid var(--line); padding-bottom: 12px; margin-bottom: 16px; }
+    h1 {
+      font-family: var(--cond); font-size: 1.5rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.02em; line-height: 1;
+    }
+    h1 span { color: var(--gold); }
+    .lede { color: var(--muted); font-size: 0.88rem; line-height: 1.55; margin-top: 8px; }
+
+    .card {
+      background: var(--surface); border: 1px solid var(--line); border-radius: 4px;
+      padding: 13px; margin-bottom: 13px;
+    }
+    .card-label {
+      margin: -13px -13px 12px; padding: 8px 12px 7px;
+      background: linear-gradient(180deg, #FFFFFF 0%, #DCE6F0 100%);
+      border-left: 5px solid var(--red); color: #061220;
+      font-family: var(--cond); font-size: 0.8rem; font-weight: 700;
+      letter-spacing: 0.13em; text-transform: uppercase;
+    }
+
+    .line { display: flex; gap: 9px; align-items: baseline; padding: 6px 0; border-top: 1px solid var(--line-soft); }
+    .line:first-of-type { border-top: none; }
+    .mark { flex: none; width: 1.1em; font-weight: 700; }
+    .ok { color: var(--green); } .bad { color: var(--danger); } .warn { color: var(--gold); } .info { color: var(--blue); }
+    .line-body { flex: 1; min-width: 0; }
+    .line-title { font-size: 0.9rem; font-weight: 600; word-break: break-word; }
+    .line-detail { font-size: 0.8rem; color: var(--muted); line-height: 1.5; margin-top: 3px; white-space: pre-wrap; word-break: break-word; }
+
+    dl.kv { display: grid; grid-template-columns: auto 1fr; gap: 5px 12px; font-size: 0.86rem; }
+    dl.kv dt { color: var(--muted); font-family: var(--cond); text-transform: uppercase; letter-spacing: 0.07em; }
+    dl.kv dd { word-break: break-all; }
+
+    pre {
+      margin-top: 8px; background: #071320; border: 1px solid var(--line); border-radius: 3px;
+      padding: 9px; overflow: auto; max-height: 210px;
+      font-size: 0.72rem; color: #B9CCE0; line-height: 1.45;
+    }
+
+    button, .btn {
+      appearance: none; display: inline-block; cursor: pointer; text-decoration: none;
+      font-family: var(--cond); font-size: 0.92rem; font-weight: 700;
+      letter-spacing: 0.08em; text-transform: uppercase;
+      background: linear-gradient(180deg, var(--surface-2), #0D1B2C);
+      border: 1px solid var(--line); border-radius: 3px; color: var(--text);
+      padding: 10px 14px; margin: 8px 6px 0 0;
+    }
+    button:active, .btn:active { background: #1B3352; }
+    button.primary { background: linear-gradient(180deg, var(--gold), #E5A800); border-color: #FFD968; color: #1A1200; }
+
+    label.field { display: block; margin-top: 10px; }
+    label.field > span {
+      display: block; margin-bottom: 5px; font-family: var(--cond);
+      font-size: 0.82rem; font-weight: 600; letter-spacing: 0.09em;
+      text-transform: uppercase; color: var(--muted);
+    }
+    input {
+      width: 100%; background: #071320; border: 1px solid var(--line); border-radius: 3px;
+      color: var(--text); font: inherit; font-size: 1rem; padding: 10px 12px;
+    }
+    input:focus { outline: 2px solid var(--gold); outline-offset: -1px; }
+    code { color: var(--gold); font-size: 0.86em; }
+    .caveat { border-left: 3px solid var(--gold); background: rgba(255,198,41,0.09);
+              color: #FFE9B4; font-size: 0.82rem; line-height: 1.5; padding: 9px 11px; border-radius: 2px; }
+  </style>
+</head>
+<body>
+<main>
+  <div class="top">
+    <h1>Admin <span>Console</span></h1>
+    <p class="lede">
+      Commissioner tools: check what Sleeper is returning, validate the draft boards,
+      and clear cached data. Nothing here changes the site — it only reads and reports.
+    </p>
+    <p class="caveat" style="margin-top:10px">
+      This page is unlisted, not protected. The site is static, so there's no server to
+      check a password against — anyone who knows the URL can open it. That's fine for
+      what's here (the league ID is already public in <code>config.js</code>, and Sleeper's
+      read API needs no key), but don't put anything secret on this page.
+    </p>
+  </div>
+
+  <div class="card">
+    <div class="card-label">Configuration</div>
+    <dl class="kv" id="configOut"></dl>
+    <a class="btn" href="./">Back to the hub</a>
+  </div>
+
+  <div class="card">
+    <div class="card-label">Sleeper connection</div>
+    <label class="field">
+      <span>League ID to test</span>
+      <input id="leagueId" inputmode="numeric" autocomplete="off" spellcheck="false" />
+    </label>
+    <button id="runSleeper" class="primary" type="button">Run Sleeper check</button>
+    <div id="sleeperOut" style="margin-top:12px"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-label">Draft board health</div>
+    <div id="dataOut"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-label">Cached data</div>
+    <div id="cacheOut"></div>
+    <button id="clearCache" type="button">Clear cached data</button>
+  </div>
+</main>
+
+<script src="config.js"></script>
+<script src="teams.js"></script>
+<script src="data/drafts.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  var BASE = 'https://api.sleeper.app/v1';
+  var CONFIG = window.LEAGUE_CONFIG || {};
+  var SEASONS = (window.KEEPER_DATA && window.KEEPER_DATA.seasons) || {};
+  var CACHE_PREFIXES = ['keeperhub.', 'nofunallowed.'];
+
+  function el(tag, cls, text) {
+    var n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text != null) n.textContent = text;
+    return n;
+  }
+
+  function line(into, mark, cls, title, detail, body) {
+    var row = el('div', 'line');
+    row.appendChild(el('span', 'mark ' + cls, mark));
+    var b = el('div', 'line-body');
+    b.appendChild(el('div', 'line-title', title));
+    if (detail) b.appendChild(el('div', 'line-detail', detail));
+    if (body != null) {
+      var pre = el('pre');
+      pre.textContent = typeof body === 'string' ? body : JSON.stringify(body, null, 2);
+      b.appendChild(pre);
+    }
+    row.appendChild(b);
+    into.appendChild(row);
+    return row;
+  }
+
+  /* ── Configuration ─────────────────────────────────────────── */
+  (function renderConfig() {
+    var out = document.getElementById('configOut');
+    var rows = [
+      ['League', CONFIG.leagueName || '—'],
+      ['Sleeper ID', CONFIG.sleeperLeagueId || '(not set)'],
+      ['Seasons', (CONFIG.seasons || []).join(', ')],
+      ['Default', String(CONFIG.defaultSeason)],
+      ['Cache', (CONFIG.sleeperCacheMinutes != null ? CONFIG.sleeperCacheMinutes : 15) + ' min']
+    ];
+    rows.forEach(function (r) {
+      out.appendChild(el('dt', null, r[0]));
+      out.appendChild(el('dd', null, r[1]));
+    });
+  })();
+
+  /* ── Sleeper probe ─────────────────────────────────────────── */
+  var idInput = document.getElementById('leagueId');
+  idInput.value = CONFIG.sleeperLeagueId || '';
+  var sleeperOut = document.getElementById('sleeperOut');
+
+  /* Resolves rather than rejects, so one failing call doesn't hide the rest. */
+  function probe(path) {
+    var started = Date.now();
+    return fetch(BASE + path, { headers: { accept: 'application/json' } })
+      .then(function (res) {
+        return res.text().then(function (text) {
+          var parsed = null, isJson = true;
+          try { parsed = JSON.parse(text); } catch (e) { isJson = false; }
+          return { path: path, ms: Date.now() - started, status: res.status, ok: res.ok,
+                   body: isJson ? parsed : text.slice(0, 400) };
+        });
+      })
+      .catch(function (err) {
+        return { path: path, ms: Date.now() - started, status: 0, ok: false,
+                 networkError: String((err && err.message) || err) };
+      });
+  }
+
+  function summarize(r) {
+    if (r.status === 0) return 'Never got an HTTP response.\n' + r.networkError;
+    if (r.status === 404) return 'HTTP 404 in ' + r.ms + 'ms — Sleeper has no record of this.';
+    if (r.status === 429) return 'HTTP 429 in ' + r.ms + 'ms — rate limited.';
+    if (!r.ok) return 'HTTP ' + r.status + ' in ' + r.ms + 'ms.';
+    if (r.body === null) return 'HTTP 200 in ' + r.ms + 'ms with a null body — how Sleeper reports an ID it does not know.';
+    if (Array.isArray(r.body)) return 'HTTP 200 in ' + r.ms + 'ms — ' + r.body.length + ' item(s).';
+    return 'HTTP 200 in ' + r.ms + 'ms.';
+  }
+
+  function marker(r) {
+    if (r.ok && r.body !== null && !(Array.isArray(r.body) && !r.body.length)) return ['✓', 'ok'];
+    return r.ok ? ['!', 'warn'] : ['✗', 'bad'];
+  }
+
+  function preview(body) {
+    return Array.isArray(body) ? body.slice(0, 2) : body;
+  }
+
+  function runSleeper() {
+    sleeperOut.innerHTML = '';
+    var id = idInput.value.trim();
+    if (!id) { line(sleeperOut, '✗', 'bad', 'No league ID entered'); return; }
+    line(sleeperOut, '·', 'warn', 'Checking ' + BASE + ' …');
+
+    probe('/league/' + id).then(function (league) {
+      sleeperOut.innerHTML = '';
+      var m = marker(league);
+      line(sleeperOut, m[0], m[1], 'GET /league/' + id, summarize(league), preview(league.body));
+
+      if (league.status === 0) {
+        line(sleeperOut, '✗', 'bad', 'Cannot reach Sleeper',
+          'The request never completed, so this is not a bad league ID. Usual causes: no ' +
+          'connection; a VPN, ad blocker or DNS filter blocking api.sleeper.app; a corporate ' +
+          'or school network; or Sleeper being down. Try again on cellular with blockers off.');
+        return;
+      }
+      if (!league.ok || league.body === null) {
+        line(sleeperOut, '✗', 'bad', 'League ID not recognised',
+          'Sleeper answered, so the network is fine — it has no league with this ID. Sleeper ' +
+          'issues a NEW ID every season, so a 2025 ID will not work for 2026. Copy the number ' +
+          'from sleeper.com/leagues/<ID>/team with the 2026 league open.');
+        return;
+      }
+
+      var body = league.body;
+      line(sleeperOut, 'i', 'info', 'League: ' + (body.name || '(unnamed)'),
+        'season ' + body.season + ' · status ' + body.status + ' · ' + body.total_rosters +
+        ' rosters\ndraft_id: ' + (body.draft_id || '(none)') +
+        '\nprevious_league_id: ' + (body.previous_league_id || '(none)'));
+
+      if (String(body.season) !== String(CONFIG.defaultSeason)) {
+        line(sleeperOut, '!', 'warn',
+          'This league is season ' + body.season + ', not ' + CONFIG.defaultSeason,
+          'The hub labels whatever comes back as ' + CONFIG.defaultSeason + '.');
+      }
+      if (!body.draft_id) {
+        line(sleeperOut, '✗', 'bad', 'No draft attached to this league',
+          'draft_id is empty, so there is nothing to read picks from.');
+        return;
+      }
+
+      return Promise.all([
+        probe('/league/' + id + '/users'),
+        probe('/league/' + id + '/rosters'),
+        probe('/draft/' + body.draft_id),
+        probe('/draft/' + body.draft_id + '/picks')
+      ]).then(function (rs) {
+        rs.forEach(function (r) {
+          var mk = marker(r);
+          line(sleeperOut, mk[0], mk[1], 'GET ' + r.path, summarize(r), preview(r.body));
+        });
+        var draft = rs[2], picks = rs[3];
+        var n = Array.isArray(picks.body) ? picks.body.length : 0;
+        if (!picks.ok) {
+          line(sleeperOut, '✗', 'bad', 'The picks call failed',
+            picks.path + ' returned HTTP ' + picks.status + '.');
+        } else if (n === 0) {
+          line(sleeperOut, '!', 'warn', 'League is fine; the draft has no picks',
+            'Draft status is "' + (draft.body && draft.body.status) + '". If that reads ' +
+            'pre_draft the draft has not been run on Sleeper. If it did happen, it may have ' +
+            'been run as a different draft than league.draft_id points at.');
+        } else {
+          line(sleeperOut, '✓', 'ok', 'Sleeper is returning everything the hub needs',
+            n + ' picks over ' + ((draft.body && draft.body.settings && draft.body.settings.rounds) || '?') +
+            ' rounds. If the 2026 tab still looks wrong, clear the cache below and reload.');
+        }
+      });
+    });
+  }
+
+  document.getElementById('runSleeper').addEventListener('click', runSleeper);
+
+  /* ── Draft board health ────────────────────────────────────── */
+  (function checkBoards() {
+    var out = document.getElementById('dataOut');
+    var seasons = Object.keys(SEASONS).sort();
+    if (!seasons.length) { line(out, '!', 'warn', 'No hand-entered boards loaded'); return; }
+
+    seasons.forEach(function (season) {
+      var board = SEASONS[season];
+      if (!board.complete || !board.picks.length) {
+        line(out, '!', 'warn', season + ': not entered yet');
+        return;
+      }
+      var picks = board.picks;
+      var problems = [];
+
+      var perRound = picks.reduce(function (m, p) { return Math.max(m, p.pick || 0); }, 0);
+      var rounds = picks.reduce(function (m, p) { return Math.max(m, p.round || 0); }, 0);
+
+      /* Every round should hold a full, gapless set of picks. */
+      for (var r = 1; r <= rounds; r++) {
+        var inRound = picks.filter(function (p) { return p.round === r; })
+                           .map(function (p) { return p.pick; }).sort(function (a, b) { return a - b; });
+        var expected = Array.apply(null, { length: perRound }).map(function (_, i) { return i + 1; });
+        if (inRound.join(',') !== expected.join(',')) {
+          problems.push('round ' + r + ' has picks ' + inRound.join(',') + ', expected 1–' + perRound);
+        }
+      }
+
+      /* A player twice in one draft means a transcription slip. */
+      var seen = {};
+      picks.forEach(function (p) {
+        if (seen[p.player]) problems.push('duplicate player: ' + p.player);
+        seen[p.player] = true;
+      });
+
+      /* Each franchise should own exactly one pick per round. */
+      var byTeam = {};
+      picks.forEach(function (p) { (byTeam[p.fantasyTeam] = byTeam[p.fantasyTeam] || []).push(p.round); });
+      var teams = Object.keys(byTeam);
+      teams.forEach(function (t) {
+        if (byTeam[t].length !== rounds) problems.push(t + ' has ' + byTeam[t].length + ' picks, expected ' + rounds);
+      });
+
+      /* Franchise names must all resolve to a current name. */
+      var unmapped = teams.filter(function (t) { return !window.Teams.currentName(season, t); });
+      unmapped.forEach(function (t) { problems.push('no ' + CONFIG.defaultSeason + ' name mapped for "' + t + '"'); });
+
+      /* An NFL code we can't colour is usually a typo (FA is legitimate). */
+      var unknownClubs = [];
+      picks.forEach(function (p) {
+        if (p.nflTeam && p.nflTeam !== 'FA' && !window.Teams.clubStyle(p.nflTeam) &&
+            unknownClubs.indexOf(p.nflTeam) === -1) unknownClubs.push(p.nflTeam);
+      });
+      if (unknownClubs.length) problems.push('unrecognised NFL codes: ' + unknownClubs.join(', '));
+
+      var summary = picks.length + ' picks · ' + rounds + ' rounds × ' + perRound +
+        ' teams · ' + teams.length + ' franchises';
+      if (problems.length) {
+        line(out, '✗', 'bad', season + ': ' + problems.length + ' problem(s)', summary + '\n• ' + problems.join('\n• '));
+      } else {
+        line(out, '✓', 'ok', season + ': clean', summary);
+      }
+    });
+  })();
+
+  /* ── Cache ─────────────────────────────────────────────────── */
+  function renderCache() {
+    var out = document.getElementById('cacheOut');
+    out.innerHTML = '';
+    var keys = [];
+    try {
+      Object.keys(localStorage).forEach(function (k) {
+        if (CACHE_PREFIXES.some(function (p) { return k.indexOf(p) === 0; })) keys.push(k);
+      });
+    } catch (e) {
+      line(out, '!', 'warn', 'Local storage unavailable', 'Private browsing, or site data is blocked.');
+      return;
+    }
+    if (!keys.length) { line(out, '✓', 'ok', 'Nothing cached'); return; }
+    keys.forEach(function (k) {
+      var age = '';
+      try {
+        var entry = JSON.parse(localStorage.getItem(k));
+        if (entry && entry.at) age = Math.round((Date.now() - entry.at) / 60000) + ' min old';
+      } catch (e) { /* not a timestamped entry */ }
+      line(out, 'i', 'info', k, age);
+    });
+  }
+  renderCache();
+
+  document.getElementById('clearCache').addEventListener('click', function () {
+    var removed = 0;
+    try {
+      Object.keys(localStorage).forEach(function (k) {
+        if (CACHE_PREFIXES.some(function (p) { return k.indexOf(p) === 0; })) {
+          localStorage.removeItem(k); removed++;
+        }
+      });
+    } catch (e) { /* nothing to clear */ }
+    renderCache();
+    line(document.getElementById('cacheOut'), '✓', 'ok', 'Cleared ' + removed + ' item(s)',
+      'Reload the hub to refetch from Sleeper.');
+  });
+
+  runSleeper();
+})();
+</script>
+</body>
+</html>

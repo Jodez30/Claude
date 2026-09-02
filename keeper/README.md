@@ -34,7 +34,7 @@ club is only there to tell players apart.
 | `rules.js` | The keeper rules engine — pure functions, no DOM |
 | `sleeper.js` | Sleeper API client for the live 2026 draft |
 | `teams.js` | Franchise name history and NFL club colours |
-| `diagnostics.html` | Runs each Sleeper call from the viewer's browser and reports which one fails |
+| `admin.html` | Unlisted commissioner console — Sleeper check, board validation, cache |
 | `config.js` | League ID, seasons, draft-round counts |
 | `data/drafts.js` | Hand-entered 2024 / 2025 boards (pre-Sleeper) |
 | `tests/rules.test.js` | Rules-engine checks — `node keeper/tests/rules.test.js` |
@@ -95,6 +95,31 @@ bottom so they stay tellable apart. ESPN and Sleeper spell some clubs differentl
 (`Wsh` vs `WAS`, `JAC` vs `JAX`), so abbreviations are normalised through an alias
 table. Anything that isn't a club — `FA` for a free agent — gets a neutral outline
 chip rather than a colour.
+
+## Admin console
+
+`admin.html` is the commissioner's page. It isn't linked from anywhere in the hub —
+open it directly at `/keeper/admin.html`. It only reads and reports; nothing on it
+changes the site.
+
+- **Configuration** — league ID, seasons, cache window, as the app sees them.
+- **Sleeper connection** — runs the same five calls the hub makes and names the
+  cause when one fails. A blocked network, an ID from the wrong season, and a draft
+  with no picks yet look identical from inside the app and need different fixes.
+- **Draft board health** — re-runs the transcription checks in the browser: every
+  round holds a full gapless set of picks, no player appears twice, every franchise
+  owns one pick per round, every team name resolves to a current name, and every NFL
+  code is one the colour table knows.
+- **Cached data** — lists what's in `localStorage` with its age, and clears it.
+
+**It is unlisted, not protected.** The site is static, so there is no server to check
+a password against — anyone with the URL can open it. That's acceptable for what's
+there: the league ID is already public in `config.js` and Sleeper's read API needs no
+key. Don't put anything secret on that page. If it ever needs to be genuinely
+private, it has to move somewhere with a backend.
+
+The league-facing error state offers a retry and nothing else — diagnosing a Sleeper
+failure is a commissioner job, not something to put in front of twelve people.
 
 ## Keeper rules as implemented
 

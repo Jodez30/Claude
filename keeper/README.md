@@ -1,4 +1,4 @@
-# Keeper Hub
+# No Fun Allowed
 
 Mobile-first hub for our 12-team fantasy football keeper league. Static HTML/CSS/JS —
 no build step, no dependencies, no login. Share the link, open it on a phone.
@@ -32,6 +32,7 @@ club is only there to tell players apart.
 | `app.js` | UI wiring: tabs, search, draft board, empty states |
 | `rules.js` | The keeper rules engine — pure functions, no DOM |
 | `sleeper.js` | Sleeper API client for the live 2026 draft |
+| `diagnostics.html` | Runs each Sleeper call from the viewer's browser and reports which one fails |
 | `config.js` | League ID, seasons, draft-round counts |
 | `data/drafts.js` | Hand-entered 2024 / 2025 boards (pre-Sleeper) |
 | `tests/rules.test.js` | Rules-engine checks — `node keeper/tests/rules.test.js` |

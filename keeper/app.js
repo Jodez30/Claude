@@ -464,22 +464,16 @@
     }
 
     if (data.status !== 'ready') {
+      /* Retry only. Diagnosing a Sleeper failure is a commissioner job, and
+         lives in the unlisted admin console rather than in front of the
+         whole league. */
       var action = null;
-      if (data.source === 'sleeper') {
-        action = h('div');
-        if (data.status !== 'unconfigured') {
-          var retry = h('button', { class: 'btn', type: 'button', text: 'Try Sleeper again' });
-          retry.addEventListener('click', function () {
-            window.SleeperAPI.clearCache();
-            loadSleeperSeason(state.season);
-          });
-          action.appendChild(retry);
-        }
-        /* Runs the same calls from the viewer's own browser and says which
-           one failed — the only way to tell a bad ID from a blocked network. */
-        action.appendChild(h('a', {
-          class: 'btn', href: 'diagnostics.html', text: 'Run Sleeper diagnostics'
-        }));
+      if (data.source === 'sleeper' && data.status !== 'unconfigured') {
+        action = h('button', { class: 'btn', type: 'button', text: 'Try Sleeper again' });
+        action.addEventListener('click', function () {
+          window.SleeperAPI.clearCache();
+          loadSleeperSeason(state.season);
+        });
       }
       var titles = {
         empty: 'No ' + state.season + ' draft data yet',

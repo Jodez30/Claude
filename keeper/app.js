@@ -148,8 +148,10 @@
     }).catch(function (err) {
       state.seasons[season] = {
         status: 'error', source: 'sleeper', picks: [],
-        message: 'Couldn\'t reach Sleeper: ' + err.message +
-          ' Nothing is being shown for ' + season + ' rather than guessing at picks.'
+        /* sleeper.js already phrases a complete, accurate sentence per failure
+           mode — don't prefix it with a cause it may contradict. */
+        message: err.message + '<br><br>Nothing is shown for ' + season +
+          ' rather than guessing at picks.'
       };
       render();
     });
@@ -450,12 +452,21 @@
 
     if (data.status !== 'ready') {
       var action = null;
-      if (data.status === 'error') {
-        action = h('button', { class: 'btn', type: 'button', text: 'Try Sleeper again' });
-        action.addEventListener('click', function () {
-          window.SleeperAPI.clearCache();
-          loadSleeperSeason(state.season);
-        });
+      if (data.source === 'sleeper') {
+        action = h('div');
+        if (data.status !== 'unconfigured') {
+          var retry = h('button', { class: 'btn', type: 'button', text: 'Try Sleeper again' });
+          retry.addEventListener('click', function () {
+            window.SleeperAPI.clearCache();
+            loadSleeperSeason(state.season);
+          });
+          action.appendChild(retry);
+        }
+        /* Runs the same calls from the viewer's own browser and says which
+           one failed — the only way to tell a bad ID from a blocked network. */
+        action.appendChild(h('a', {
+          class: 'btn', href: 'diagnostics.html', text: 'Run Sleeper diagnostics'
+        }));
       }
       var titles = {
         empty: 'No ' + state.season + ' draft data yet',

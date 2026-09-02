@@ -11,14 +11,44 @@ window.SleeperAPI = (function () {
   var BASE = 'https://api.sleeper.app/v1';
   var CACHE_PREFIX = 'keeperhub.sleeper.';
 
+  /* Distinguishing these cases matters: "Failed to fetch" and "404" need
+     completely different fixes, and the browser reports both as a rejected
+     promise with no useful detail attached. */
   function getJSON(path) {
-    return fetch(BASE + path, { headers: { accept: 'application/json' } }).then(function (res) {
-      if (!res.ok) {
-        throw new Error('Sleeper returned ' + res.status + ' for ' + path +
-          (res.status === 404 ? ' — check the league ID.' : ''));
-      }
-      return res.json();
-    });
+    return fetch(BASE + path, { headers: { accept: 'application/json' } })
+      .catch(function () {
+        /* fetch only rejects for network-level failures: offline, DNS, a
+           blocked request, or a CORS preflight rejection. */
+        throw new Error('Could not reach api.sleeper.app at all (' + path + '). ' +
+          'That is a network-level failure, not a bad league ID — check the ' +
+          'connection, and whether a VPN, content blocker or corporate network ' +
+          'is blocking the request.');
+      })
+      .then(function (res) {
+        if (res.status === 404) {
+          throw new Error('Sleeper has no record of ' + path + ' (404). ' +
+            'The league ID is probably wrong, or belongs to a different season.');
+        }
+        if (res.status === 429) {
+          throw new Error('Sleeper is rate-limiting this browser (429). Wait a minute and retry.');
+        }
+        if (!res.ok) {
+          throw new Error('Sleeper returned HTTP ' + res.status + ' for ' + path + '.');
+        }
+        return res.json().catch(function () {
+          throw new Error('Sleeper returned something that is not JSON for ' + path + '.');
+        });
+      })
+      .then(function (body) {
+        /* Sleeper answers 200 with a literal `null` for an unknown league
+           rather than a 404, which otherwise surfaces as a confusing
+           "cannot read property of null" further down. */
+        if (body === null) {
+          throw new Error('Sleeper returned an empty result for ' + path + ' (HTTP 200, body null). ' +
+            'That is how it reports an ID it does not recognise — check the league ID.');
+        }
+        return body;
+      });
   }
 
   function readCache(key, maxAgeMinutes) {
@@ -128,11 +158,15 @@ window.SleeperAPI = (function () {
 
       if (!normalized.length) {
         result.emptyReason = draft.status === 'complete'
-          ? 'Sleeper reports the draft as complete but returned no picks.'
-          : 'The 2026 draft has not started yet on Sleeper (status: ' + (draft.status || 'unknown') + ').';
+          ? 'Sleeper reports draft ' + league.draft_id + ' as complete but returned no picks for it.'
+          : 'Sleeper has no picks for draft ' + league.draft_id + ' yet (status: ' +
+            (draft.status || 'unknown') + ').';
       }
 
-      writeCache(cacheKey, result);
+      /* Only a board with picks is worth caching. Caching an empty one would
+         keep showing "no picks yet" for the whole cache window after the
+         draft actually starts. */
+      if (normalized.length) writeCache(cacheKey, result);
       return result;
     });
   }

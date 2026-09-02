@@ -354,8 +354,11 @@
       font-size: 0.84rem; color: var(--gold);
     }
 
+    /* Used on both <button> and <a>, so it needs to lay out as a block and
+       drop the link underline. */
     .btn {
-      appearance: none; width: 100%; cursor: pointer; margin-top: 10px;
+      appearance: none; display: block; width: 100%; cursor: pointer; margin-top: 10px;
+      text-align: center; text-decoration: none;
       font-family: var(--cond);
       font-size: 0.98rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
       background: linear-gradient(180deg, var(--surface-2), #0D1B2C);
@@ -414,7 +417,7 @@
 <body>
   <header class="header">
     <div class="header-top">
-      <h1 class="header-title">Keeper <span>Hub</span></h1>
+      <h1 class="header-title">No Fun <span>Allowed</span></h1>
       <div class="header-sub" id="leagueLabel">—</div>
     </div>
     <div class="segmented" role="tablist" aria-label="Season" id="yearSelector"></div>
